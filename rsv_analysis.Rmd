@@ -1,0 +1,687 @@
+---
+title: "RSV_analysis"
+author: "Nitsueh Kebere and Jessica McClintock"
+date: "5/10/2022"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+setwd("/rprojectnb2/infant-microbiome/work/jessmcc/rsv")
+library(tidyverse)
+library(devtools) 
+library(phyloseq) 
+library(HMP) 
+library(vegan)
+library(picante) 
+
+library(DESeq2)
+library(microbiome) 
+library(ALDEx2) 
+library(metagenomeSeq)
+library(dendextend)  
+library(selbal) 
+library(rms)
+library(breakaway)
+library(png)
+```
+
+### Data Statistics and Visualization 
+Possibly come form PathoScope per Brie
+
+```{r message=FALSE, warning=FALSE}
+img1 <- readPNG("stat.png")
+grid::grid.raster(img1)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+img2 <- readPNG("state.png")
+grid::grid.raster(img2)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+img3 <- readPNG("hiv.png")
+grid::grid.raster(img3)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+img4 <- readPNG("dth_age.png")
+grid::grid.raster(img4)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+img5 <- readPNG("gender.png")
+grid::grid.raster(img5)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+img6 <- readPNG("location.png")
+grid::grid.raster(img6)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+img7 <- readPNG("duration.png")
+grid::grid.raster(img7)
+```
+
+
+### Creating TidyData
+
+
+```{r message=FALSE, warning=FALSE}
+otu_mat <- read_csv("Assay_count_genus.csv")
+tax_mat <- read_csv("Assay_taxonomy_genus.csv")
+samples_df <- read_csv("Assay_annotation.csv")
+
+# otuTidy <- otu_mat %>%
+#   pivot_longer(-X1, names_to = "SampleID", values_to = "Abundance") %>%
+#   rename(X1 = "Taxa") 
+# 
+# samplesTidy <- samples_df %>%
+#   rename(X1 = "SampleID")
+# 
+# zprimeTidy <- inner_join(samplesTidy, otuTidy, by = "SampleID")
+# zprimeTidy <- zprimeTidy %>%
+#   group_by(subject) %>%
+#   mutate(relAbund = Abundance/sum(Abundance))
+
+```
+
+### Create Phyloseq Object
+```{r message=FALSE, warning=FALSE}
+OTU <- otu_mat %>%
+  tibble::column_to_rownames("X1") %>% 
+  as.matrix() %>%
+  otu_table(taxa_are_rows = TRUE)
+
+TAX <- tax_mat %>% 
+  tibble::column_to_rownames("otu") %>% 
+  as.matrix() %>%
+  tax_table()
+
+samples <- samples_df %>% 
+  tibble::column_to_rownames("X1") %>%
+  sample_data()
+
+zprime <- phyloseq(OTU, TAX, samples)
+
+```
+
+
+### Visualizing Relative Abundance 
+
+```{r message=FALSE, warning=FALSE}
+relativeAbundance <- function(x){
+  x / sum(x)
+}
+
+zp_rel_abund <- transform_sample_counts(zprime, relativeAbundance)
+
+plot_bar(zp_rel_abund, fill = "genus") +
+  geom_bar(aes(color = genus, fill = genus), stat = "identity", position = "stack") +
+  labs(x = "Sample", y = "Relative Abundance\n") +
+  facet_wrap(~state, scales = "free") +
+  theme(panel.background = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+```
+### Visulaize Relative Abundance with Genera <3.5% pooled to "Other"
+
+```{r message=FALSE, warning=FALSE, fig.width=10}
+# otuTidy <- OTU %>%
+#   as.data.frame()
+# otuTidy <- lapply(otuTidy[,-1],function(x) {x/sum(x)}) %>%
+#   as.data.frame()
+#   
+# row.names(otuTidy) <- otu_mat$X1
+# otuTidy <- otuTidy %>% 
+#   rownames_to_column("Taxa") %>%
+#   pivot_longer(!Taxa, names_to = "Sample", values_to = "relAbund")
+# 
+# #otuTidy %>% group_by(Taxa) %>% summarise(max = max(relAbund)) %>% arrange(desc(max))
+# 
+# taxonPooled <- otuTidy %>% 
+#   group_by(Taxa) %>% 
+#   summarise(pool = mean(relAbund) < 0.05, .groups = "drop")
+
+
+taxasToMerge <- c()
+
+for (taxa in 1:nrow(otu_table(zp_rel_abund))){
+  if (mean(otu_table(zp_rel_abund)[taxa]) < 0.035){
+    taxasToMerge <- append(taxasToMerge, row.names(otu_table(zp_rel_abund))[taxa])
+  }
+}
+
+zpMerged <- merge_taxa(zp_rel_abund, taxasToMerge)
+
+plot_bar(zpMerged, fill = "genus") +
+  geom_bar(aes(color = genus, fill = genus), stat = "identity", position = "stack") +
+  labs(x = "Sample", y = "Relative Abundance\n") +
+  facet_wrap(~state, scales = "free") +
+  theme(panel.background = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+#N/A in graph represent all merged taxa
+
+#Separated by Genus to see individual fluctuations  
+plot_bar(zpMerged, fill = "genus") +
+  geom_bar(aes(color = genus, fill = genus), stat = "identity", position = "stack") +
+  labs(x = "Sample", y = "Relative Abundance\n") +
+  facet_grid(genus~state, scales = "free") +
+  theme(panel.background = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+  
+```
+
+### Mean Abundance by Disease State - Genus 
+```{r messafe=FALSE, warning=FALSE, fig.width=10}
+plot_bar(zpMerged, x = "state", fill = "genus")+ geom_bar(aes(color=genus, fill=genus), stat = "identity", position = "stack")
+```
+
+### Visulaizing Abundance Grouped by Genus
+
+```{r message=FALSE, warning=FALSE, fig.width=10}
+zp_genus <- tax_glom(zp_rel_abund, "genus") #relative abundance
+zp_genus_counts <- tax_glom(zprime, "genus") #abundance in counts
+
+psmelt(zp_genus) %>%
+  ggplot(data = ., aes(x = state, y = Abundance)) +
+  geom_boxplot(outlier.shape  = NA) +
+  geom_jitter(aes(color = genus), height = 0, width = .2) +
+  labs(title = "Relative Abundance based on RSV Status", x = "", y = "Relative Abundance\n") +
+  facet_wrap(~ OTU, scales = "free") +
+  theme(legend.position = "none")
+
+
+```
+### Testing for a difference in genus level abundance 
+
+```{r, message=FALSE, warning=FALSE}
+zp_pos <- subset_samples(zp_genus_counts, state == "pos")
+zp_neg <- subset_samples(zp_genus_counts, state =="neg")
+
+zp_pos_otu <- otu_table(zp_pos) %>%
+  data.frame() %>%
+  t() %>%
+  as.data.frame() %>%
+  mutate(Other = Dolosigranulum + Gemella + Porphyromonas + Serratia + Veillonella) %>%
+  dplyr::select(-Dolosigranulum, -Gemella, -Porphyromonas, -Serratia, -Veillonella) %>%
+  as.matrix()
+
+zp_neg_otu <- otu_table(zp_neg) %>%
+  data.frame() %>%
+  t() %>%
+  as.data.frame() %>%
+  mutate(Other = Dolosigranulum + Gemella + Porphyromonas + Serratia + Veillonella) %>%
+  dplyr::select(-Dolosigranulum, -Gemella, -Porphyromonas, -Serratia, -Veillonella) %>%
+  as.matrix()
+
+group_data <- list(zp_pos_otu, zp_neg_otu)
+(xdc <- HMP::Xdc.sevsample(group_data)) 
+```
+
+### Visualizing Abundance Grouped by Location
+
+```{r message=FALSE, warning=FALSE, fig.width=10}
+
+psmelt(zp_genus) %>%
+  ggplot(data = ., aes(x = location, y = Abundance)) +
+  geom_boxplot(outlier.shape  = NA) +
+  geom_jitter(aes(color = genus), height = 0, width = .2) +
+  labs(title = "Relative Abundance Based on Location of Death", x = "", y = "Abundance\n") +
+  facet_wrap(~ OTU, scales = "free") +
+  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
+
+```
+### Testing for a difference in genus level abundance by location 
+
+```{r, message=FALSE, warning=FALSE}
+zp_BID <- subset_samples(zp_genus_counts, location == "BID")
+zp_Hospital <- subset_samples(zp_genus_counts, location == "Hospital")
+
+zp_BID_otu <- otu_table(zp_BID) %>%
+  data.frame() %>%
+  t() %>%
+  as.data.frame() %>%
+  mutate(Other = Dolosigranulum + Gemella + Porphyromonas + Serratia + Veillonella) %>%
+  dplyr::select(-Dolosigranulum, -Gemella, -Porphyromonas, -Serratia, -Veillonella) %>%
+  as.matrix()
+
+zp_Hospital_otu <- otu_table(zp_Hospital) %>%
+  data.frame() %>%
+  t() %>%
+  as.data.frame() %>%
+  mutate(Other = Dolosigranulum + Gemella + Porphyromonas + Serratia + Veillonella) %>%
+  dplyr::select(-Dolosigranulum, -Gemella, -Porphyromonas, -Serratia, -Veillonella) %>%
+  as.matrix()
+
+group_data <- list(zp_BID_otu, zp_Hospital_otu)
+(xdc_location <- HMP::Xdc.sevsample(group_data)) 
+```
+
+### Abundance by HIV status
+```{r message=FALSE, warning=FALSE, fig.width=10}
+
+psmelt(zp_genus) %>%
+  ggplot(data = ., aes(x = as.factor(mother_hiv), y = Abundance)) +
+  geom_boxplot(outlier.shape  = NA) +
+  geom_jitter(aes(color = genus), height = 0, width = .2) +
+  labs(title = "Relative Abundance Based on Mother's HIV Status", x = "", y = "Abundance\n") +
+  facet_wrap(~ OTU, scales = "free") +
+  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
+
+```
+### Testing for a difference in genus level abundance by location 
+
+```{r, message=FALSE, warning=FALSE}
+zp_HIV_neg <- subset_samples(zp_genus_counts, mother_hiv == 0)
+zp_HIV_pos <- subset_samples(zp_genus_counts, mother_hiv == 1)
+
+zp_HIV_neg_otu <- otu_table(zp_HIV_neg) %>%
+  data.frame() %>%
+  t() %>%
+  as.data.frame() %>%
+  mutate(Other = Dolosigranulum + Gemella + Porphyromonas + Serratia + Veillonella) %>%
+  dplyr::select(-Dolosigranulum, -Gemella, -Porphyromonas, -Serratia, -Veillonella) %>%
+  as.matrix()
+
+zp_HIV_pos_otu <- otu_table(zp_HIV_pos) %>%
+  data.frame() %>%
+  t() %>%
+  as.data.frame() %>%
+  mutate(Other = Dolosigranulum + Gemella + Porphyromonas + Serratia + Veillonella) %>%
+  dplyr::select(-Dolosigranulum, -Gemella, -Porphyromonas, -Serratia, -Veillonella) %>%
+  as.matrix()
+
+group_data <- list(zp_HIV_neg_otu, zp_HIV_pos_otu)
+(xdc_location <- HMP::Xdc.sevsample(group_data)) 
+```
+
+### Abundance based on Length of Hospital Stay
+```{r message=FALSE, warning=FALSE, fig.width=10}
+
+psmelt(zp_genus) %>%
+  ggplot(data = ., aes(x = hosp_duration, y = Abundance)) +
+  geom_boxplot(outlier.shape  = NA) +
+  geom_jitter(aes(color = genus), height = 0, width = .2) +
+  labs(title = "Relative Abundance Based on Length of Hospital Stay", x = "", y = "Abundance\n") +
+  facet_wrap(~ OTU, scales = "free") +
+  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=22))
+
+```
+### Abundance based on Gender
+```{r message=FALSE, warning=FALSE, fig.width=10}
+
+psmelt(zp_genus) %>%
+  #filter(gender != 8) %>%
+  ggplot(data = ., aes(x = as.factor(gender), y = Abundance)) +
+  geom_boxplot(outlier.shape  = NA) +
+  geom_jitter(aes(color = genus), height = 0, width = .2) +
+  labs(title = "Relative Abundance based on Gender", x = "Gender", y = "Abundance\n") +
+  facet_wrap(~ OTU, scales = "free") +
+  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=22))
+
+```
+### Heirarchical Clustering 
+
+
+```{r, message=FALSE, warning=FALSE, fig.width=15}
+#Extract OTU table and compute BC
+zp_rel_otu <- otu_table(zp_rel_abund) %>%
+  as.data.frame() %>%
+  t() #vegan requires each row to be a sample and column to be data
+
+bc_dist <- vegdist(zp_rel_otu, method = "bray")
+min(bc_dist)
+max(bc_dist)
+mean(bc_dist)
+median(bc_dist)
+
+ward <- as.dendrogram(hclust(bc_dist, method = "ward.D2"))
+#Provide color codes
+meta <- data.frame(sample_data(zp_rel_abund))
+colorCode <- c(pos = "red", neg = "blue")
+labels_colors(ward) <- colorCode[meta$state][order.dendrogram(ward)]
+#Plot
+plot(ward)
+
+```
+
+
+### HeatMap 
+
+
+```{r, message=FALSE, warning=FALSE, fig.width=15}
+
+p <- plot_heatmap(zprime, method = "NMDS", distance = "bray",
+             sample.label = "state", sample.order = "state")
+axis_color <- ifelse(p$scales$scales[[1]]$labels == "pos", "red", "blue")
+p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10, colour = axis_color), plot.margin = unit(c(1,1,1,1),"cm"))
+
+
+```
+
+
+### Alpha Diversity 
+
+```{r}
+ggplot(data = data.frame("total_reads" =  phyloseq::sample_sums(zprime),
+                         "observed" = phyloseq::estimate_richness(zprime, measures = "Observed")[, 1]),
+       aes(x = total_reads, y = observed)) +
+  geom_point() +
+  geom_smooth(method="lm", se = FALSE) +
+  labs(x = "\nTotal Reads", y = "Observed Richness\n")
+
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+
+#(zp_rare <- rarefy_even_depth(zprime, rngseed = 123, replace = FALSE))
+# set seed to 123 to create a repeatable random sampling, not recommended to use subsampling
+
+adiv <- data.frame(
+  "Observed" = estimate_richness(zprime, measures = "Observed"),
+  "Shannon" = estimate_richness(zprime, measures = "Shannon"),
+  "Simpson" = estimate_richness(zprime, measures = "Simpson"),
+  "Status" = sample_data(zprime)$state)
+#head(adiv)
+
+adiv %>%
+  gather(key = metric, value = value, c("Observed", "Shannon", "Simpson")) %>%
+  mutate(metric = factor(metric, levels = c("Observed", "Shannon", "Simpson"))) %>%
+  ggplot(aes(x = Status, y = value)) +
+  geom_boxplot(outlier.color = "black") +
+  geom_jitter(aes(color = Status), height = 0, width = .2) +
+  labs(x = "", y = "") +
+  facet_wrap(~ metric, scales = "free") +
+  theme(legend.position="none")
+
+
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+adiv %>%
+  group_by(Status) %>%
+  summarise(median_observed = median(Observed),
+            median_shannon = median(Shannon),
+            median_simpson = median(Simpson))
+
+# Test for normality
+shapiro.test(subset(adiv, Status == "pos")$Shannon)
+shapiro.test(subset(adiv, Status == "neg")$Shannon)
+shapiro.test(subset(adiv, Status == "pos")$Simpson)
+shapiro.test(subset(adiv, Status == "neg")$Simpson)
+
+# pos samples are not normally distributed, neg samples are, so use 
+wilcox.test(Observed ~ Status, data = adiv, exact = FALSE, conf.int = TRUE)
+wilcox.test(Shannon ~ Status, data = adiv, conf.int = TRUE) 
+wilcox.test(Simpson ~ Status, data = adiv, conf.int = TRUE) 
+
+```
+
+
+### Beta Diversity 
+
+
+#### PCA
+
+
+```{r, message=FALSE, warning=FALSE}
+zp_clr <- microbiome::transform(zprime, "clr")  #centered log ratio, log(x1/mean(x))
+
+#PCA via phyloseq
+ord_clr <- phyloseq::ordinate(zp_clr, "RDA")
+#Plot scree plot
+phyloseq::plot_scree(ord_clr) + 
+  geom_bar(stat="identity", fill = "blue") +
+  labs(x = "\nAxis", y = "Proportion of Variance\n")
+#head(ord_clr$CA$eig)  
+
+```
+
+```{r}
+#Scale axes and plot ordination
+clr1 <- ord_clr$CA$eig[1] / sum(ord_clr$CA$eig)
+clr2 <- ord_clr$CA$eig[2] / sum(ord_clr$CA$eig)
+phyloseq::plot_ordination(zprime, ord_clr, type="samples", color="state") + 
+  geom_point(size = 2) +
+  coord_fixed(clr2 / clr1) +
+  stat_ellipse(aes(group = state), linetype = 2)
+#We see some clustering by RSV status
+```
+
+#### PCoA
+
+
+```{r, message=FALSE, warning=FALSE}
+#Generate distance matrix
+clr_dist_matrix <- phyloseq::distance(zp_clr, method = "euclidean") 
+#ADONIS test
+vegan::adonis(clr_dist_matrix ~ phyloseq::sample_data(zp_clr)$state)
+
+dispr <- vegan::betadisper(clr_dist_matrix, phyloseq::sample_data(zp_clr)$state)
+#dispr
+
+plot(dispr, main = "Ordination Centroids and Dispersion Labeled: Aitchison Distance", sub = "")
+
+```
+
+```{r}
+boxplot(dispr, main = "", xlab = "")
+permutest(dispr)
+
+```
+
+#### NMDS
+
+
+```{r, message=FALSE, warning=FALSE}
+
+zprime.ord <- ordinate(zprime, "NMDS", "bray")
+
+plot_ordination(zprime, zprime.ord, type="samples", color="state", 
+                title="Samples") + geom_point(size=3)
+
+
+
+```
+
+### Differential Abundance Testing - RSV state
+
+```{r, message=FALSE, warning=FALSE}
+#Generate data.frame with OTUs and metadata
+zp_wilcox <- data.frame(t(data.frame(phyloseq::otu_table(zp_clr))))
+zp_wilcox$state <- phyloseq::sample_data(zp_clr)$state
+
+#Define functions to pass to map
+wilcox_model <- function(df){
+  wilcox.test(abund ~state, data = df)
+}
+wilcox_pval <- function(df){
+  wilcox.test(abund ~state, data = df)$p.value
+}
+
+#Create nested data frames by OTU and loop over each using map 
+wilcox_results <- zp_wilcox %>%
+  gather(key = Genus, value = abund, -state) %>%
+  group_by(Genus) %>%
+  nest() %>%
+  mutate(wilcox_test = map(data, wilcox_model),
+         p_value = map(data, wilcox_pval))       
+
+#Show results
+#head(wilcox_results)
+#head(wilcox_results$data[[1]])
+#wilcox_results$p_value[[1]]
+
+
+#Unnesting
+wilcox_results <- wilcox_results %>%
+  dplyr::select(Genus, p_value) %>%
+  unnest()
+
+
+head(wilcox_results)
+
+#Adding taxonomic labels
+taxa_info <- data.frame(tax_table(zp_clr))
+taxa_info <- taxa_info %>% rownames_to_column(var = "Genus")
+#Computing FDR corrected p-values
+wilcox_results <- wilcox_results %>%
+#   full_join(taxa_info) %>%
+   arrange(p_value) %>%
+   mutate(BH_FDR = p.adjust(p_value, "BH")) %>%
+   #filter(BH_FDR < 0.05) %>%
+   dplyr::select(Genus, p_value, BH_FDR, everything())
+
+print.data.frame(wilcox_results) 
+
+```
+
+### Differential Abundance - Location
+```{r, message=FALSE, warning=FALSE}
+zp_wilcox <- data.frame(t(data.frame(phyloseq::otu_table(zp_clr))))
+zp_wilcox$location <- phyloseq::sample_data(zp_clr)$location
+
+#Define functions to pass to map
+wilcox_model <- function(df){
+  wilcox.test(abund ~location, data = df)
+}
+wilcox_pval <- function(df){
+  wilcox.test(abund ~location, data = df)$p.value
+}
+
+#Create nested data frames by OTU and loop over each using map 
+wilcox_results <- zp_wilcox %>%
+  gather(key = Genus, value = abund, -location) %>%
+  group_by(Genus) %>%
+  nest() %>%
+  mutate(wilcox_test = map(data, wilcox_model),
+         p_value = map(data, wilcox_pval))       
+
+#Show results
+#head(wilcox_results)
+#head(wilcox_results$data[[1]])
+#wilcox_results$p_value[[1]]
+
+
+#Unnesting
+wilcox_results <- wilcox_results %>%
+  dplyr::select(Genus, p_value) %>%
+  unnest()
+
+
+head(wilcox_results)
+
+#Adding taxonomic labels
+taxa_info <- data.frame(tax_table(zp_clr))
+taxa_info <- taxa_info %>% rownames_to_column(var = "Genus")
+#Computing FDR corrected p-values
+wilcox_results <- wilcox_results %>%
+#   full_join(taxa_info) %>%
+   arrange(p_value) %>%
+   mutate(BH_FDR = p.adjust(p_value, "BH")) %>%
+   filter(BH_FDR < 0.05) %>%
+   dplyr::select(Genus, p_value, BH_FDR, everything())
+
+print.data.frame(wilcox_results) 
+
+```
+### Differential Abundance - HIV Exposure
+```{r, message=FALSE, warning=FALSE}
+zp_wilcox <- data.frame(t(data.frame(phyloseq::otu_table(zp_clr))))
+zp_wilcox$mother_hiv <- phyloseq::sample_data(zp_clr)$mother_hiv
+
+#Define functions to pass to map
+wilcox_model <- function(df){
+  wilcox.test(abund ~mother_hiv, data = df)
+}
+wilcox_pval <- function(df){
+  wilcox.test(abund ~mother_hiv, data = df)$p.value
+}
+
+#Create nested data frames by OTU and loop over each using map 
+wilcox_results <- zp_wilcox %>%
+  gather(key = Genus, value = abund, -mother_hiv) %>%
+  group_by(Genus) %>%
+  nest() %>%
+  mutate(wilcox_test = map(data, wilcox_model),
+         p_value = map(data, wilcox_pval))       
+
+#Show results
+#head(wilcox_results)
+#head(wilcox_results$data[[1]])
+#wilcox_results$p_value[[1]]
+
+
+#Unnesting
+wilcox_results <- wilcox_results %>%
+  dplyr::select(Genus, p_value) %>%
+  unnest()
+
+
+head(wilcox_results)
+
+#Adding taxonomic labels
+taxa_info <- data.frame(tax_table(zp_clr))
+taxa_info <- taxa_info %>% rownames_to_column(var = "Genus")
+#Computing FDR corrected p-values
+wilcox_results <- wilcox_results %>%
+#   full_join(taxa_info) %>%
+   arrange(p_value) %>%
+   mutate(BH_FDR = p.adjust(p_value, "BH")) %>%
+   filter(BH_FDR < 0.05) %>%
+   dplyr::select(Genus, p_value, BH_FDR, everything())
+
+print.data.frame(wilcox_results) 
+
+```
+
+### Linear Regression
+```{r, message=FALSE, warning=FALSE}
+gemellaCounts <- as.data.frame(t(as.data.frame(otu_table(zprime)["Gemella"])))
+gemellaInfo <- merge(meta, gemellaCounts, by=0)
+
+for (row in 1:nrow(gemellaInfo)){
+   if(gemellaInfo[row, "state"] == "pos"){
+     gemellaInfo[row, "state"] <- 1
+   }else if(gemellaInfo[row, "state"] == "neg"){
+     gemellaInfo[row, "state"] <- 0
+   }
+
+  if(gemellaInfo[row, "location"] == "BID"){
+    gemellaInfo[row, "location"] <- 0
+  }else if(gemellaInfo[row, "location"] == "Hospital"){
+    gemellaInfo[row, "location"] <- 1
+  }
+}
+  
+fit0 <- lm(Gemella ~ 1, gemellaInfo)
+fit1 <- lm(Gemella ~ state, gemellaInfo)
+fit2 <- lm(Gemella ~ state + mother_hiv, gemellaInfo)
+fit3 <- lm(Gemella ~ state + mother_hiv + location, gemellaInfo)
+
+summary(fit0)
+summary(fit1)
+summary(fit2)
+summary(fit3)
+
+anova(fit0, fit1, test='F')
+
+```

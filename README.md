@@ -2,19 +2,19 @@
 This repository contains all information (including raw data, processed data, and all code used for data preprocessing, statistical analysis, and figure generation) used in the analysis of the ZPRIME microbiome data. 
 
 ## Data files
-Raw data can be found:
+Raw data can be found: \n
 ZPRIME_raw_revised.rds - revision was for better naming purposes only
 
-Processed data includes:
-Filtered data to include an other category for taxon w/less than 1% relative abundance:
-Assay_annotation_1pct.csv
-Assay_count_1pct.csv
-Assay_taxonomy_1pct.csv
+Processed data includes: \n
+Filtered data to include an other category for taxon w/less than 1% relative abundance:\n
+Assay_annotation_1pct.csv \n
+Assay_count_1pct.csv \n
+Assay_taxonomy_1pct.csv \n
 
-Filtered data to include an other category for taxon w/less than .1% relative abundance:
-Assay_annotation_point1pct.csv
-Assay_count_point1pct.csv
-Assay_taxonomy_point1pct.csv
+Filtered data to include an other category for taxon w/less than .1% relative abundance:\n
+Assay_annotation_point1pct.csv\n
+Assay_count_point1pct.csv\n
+Assay_taxonomy_point1pct.csv\n
 
 ## Relevant Files and Resources
 

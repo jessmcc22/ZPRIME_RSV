@@ -16,6 +16,7 @@ suppressPackageStartupMessages({
   # Data formats
   library(animalcules)
   library(MultiAssayExperiment)
+  library(SummarizedExperiment)
     
 })
 ```
@@ -24,7 +25,7 @@ suppressPackageStartupMessages({
 
 The purpose of this code is to take the final formatted Multi-Assay Experiment output by Animalcules and label as "Other" all the taxons belonging to genera that represent <1% average relative abundances across samples. 
 
-The resulting data object is a SummarizedExperiment object saved as "ZPRIME_1pct.rds" and csv files for sample data ("Assay_annotation"), taxon information ("Assay_taxonomy") and count data ("Assay_count").
+The result are csv files for sample data ("Assay_annotation"), taxon information ("Assay_taxonomy") and count data ("Assay_count").
 
 This file can be modified to create species files by changing instances of "genus" to "species", except line 81 where "genus =" must remain. It can also be modified to filter for 1% of the relative abundances by changing all "0.001" to "0.01" and all "point1pct" to "1pct"
 
@@ -102,9 +103,9 @@ rownames(tax_table_other) <- tax_table_other$genus
 
 ## Create data files for Analysis
 ```{R}
-#write.csv(tax_table_other, "genus/data/point1pct/Assay_taxonomy_point1pct.csv")
-#write.csv(sam_table, "genus/data/point1pct/Assay_annotation_point1pct.csv")
-#write.csv(counts_other, "genus/data/point1pct/Assay_count_point1pct.csv")
+write.csv(tax_table_other, "genus/data/point1pct/Assay_taxonomy_point1pct.csv")
+write.csv(sam_table, "genus/data/point1pct/Assay_annotation_point1pct.csv")
+write.csv(counts_other, "genus/data/point1pct/Assay_count_point1pct.csv")
 ```
 
 ## How many genera?

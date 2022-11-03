@@ -338,12 +338,12 @@ plot_bar(zp_rel_abund, fill = "genus") +
         legend.key.size = unit(0.2, "cm"))+
   scale_fill_paletteer_d(chosen_pal)+
     scale_color_paletteer_d(chosen_pal)
-#ggsave(paste0("Plots/paletteoptions/", color, ".jpeg"))
+#ggsave(paste0("Plots/1pct/paletteoptions/", color, ".jpeg"))
 
 #colorCombos[color] <-  chosen_pal
 #}
 
-ggsave("Plots/relativeAbundance.jpeg")
+ggsave("Plots/1pct/relativeAbundance.jpeg")
 ```
 
 ## Top Five Most Abundant Genera 
@@ -376,7 +376,7 @@ plot_bar(zp_rel_abund, x = "state", fill = "genus")+
   scale_fill_paletteer_d(chosen_pal)+
     scale_color_paletteer_d(chosen_pal)
 
-ggsave("Plots/meanRelativeAbundance.jpeg")
+ggsave("Plots/1pct/meanRelativeAbundance.jpeg")
 ```
 
 ## Visulaizing Relative Abundance Grouped by RSV state
@@ -467,7 +467,7 @@ adiv %>%
   facet_wrap(~ metric, scales = "free") +
   theme(legend.position="none", plot.title = element_text(hjust = 0.5))
 
-ggsave("Plots/shannonAndSimpson_state.jpeg")
+ggsave("Plots/1pct/shannonAndSimpson_state.jpeg")
 ```
 
 
@@ -547,7 +547,7 @@ p <- plot_heatmap(zpscale, method = "NMDS", distance = "bray",
 axis_color <- ifelse(p$scales$scales[[1]]$labels == "RSV+", "red", "blue")
 p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10, colour = axis_color), plot.margin = unit(c(1,1,1,1),"cm"))
 
-ggsave("Plots/heatmap.jpeg")
+ggsave("Plots/1pct/heatmap.jpeg")
 ```
 
 ### PCA
@@ -612,14 +612,14 @@ permutest(dispr)
 eucDis <- ordinate(zp_rel_abund, method = "PCoA", distance = clr_dist_matrix )
 PCoA_Atchison_plot <- plot_ordination(zp_rel_abund, eucDis, color = "state")
 
-ggsave("Plots/PCoA_Atchinson.jpeg")
+ggsave("Plots/1pct/PCoA_Atchinson.jpeg")
 
 #Bray-Curtis Distance PCoA
 pcoa <- ordinate(zp_rel_abund, method = "PCoA", distance = "bray", weighted = TRUE)
 
 PCoA_Bray_plot <- plot_ordination(zp_rel_abund, pcoa, color = "state")
 
-ggsave("Plots/PCoA_Bray.jpeg")
+ggsave("Plots/1pct/PCoA_Bray.jpeg")
 
 # zp_rare <- rarefy_even_depth(zprime, rngseed = 123, replace = FALSE)
 # ord_unifrac <- ordinate(zp_rare, method = "PCoA", distance = "wunifrac")
@@ -644,7 +644,7 @@ NMDS_plot <- plot_ordination(zp_rel_abund, zprime.ord, type="samples", color="st
     geom_point(size=3)
 
 
-ggsave("Plots/NMDS.jpeg")
+ggsave("Plots/1pct/NMDS.jpeg")
 ```
 ### Create one Bray-Curtis Figure
 ```{r message=FALSE, warning=FALSE, fig.width=10}
@@ -656,7 +656,7 @@ brayCurtisFigure <- ggarrange(p,
     bgcolor("white")
 brayCurtisFigure
 
-ggsave("Plots/BrayCurtisFigure.jpeg")
+ggsave("Plots/1pct/BrayCurtisFigure.jpeg")
 ```
 
 ## Differential Abundance Testing
@@ -714,7 +714,7 @@ psmelt(zp_rel_abund) %>%
   facet_wrap(~ OTU, scales = "free") +
   theme(legend.position = "none")
 
-ggsave("Plots/t_test_sig_state.jpeg", dpi = 300)
+ggsave("Plots/1pct/t_test_sig_state.jpeg", dpi = 300)
 ```
 
 ### Wilcoxon rank-sum test
@@ -789,7 +789,7 @@ if(length(significant_taxa$Genus) != 0){
   scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
 
 
-ggsave("Plots/wilcox_sig_state.jpeg", dpi = 300, width = 5, height = 4)  
+ggsave("Plots/1pct/wilcox_sig_state.jpeg", dpi = 300, width = 5, height = 4)  
 }else{
     print("No signifiant taxa via wilcoxon test for RSV status.")
 }
@@ -861,7 +861,7 @@ adiv %>%
   facet_wrap(~ metric, scales = "free") +
   theme(legend.position="none")
 
-ggsave("Plots/shannonAndSimpson_location.jpeg")
+ggsave("Plots/1pct/shannonAndSimpson_location.jpeg")
 ```
 
 ```{r, message=FALSE, warning=FALSE}
@@ -934,7 +934,7 @@ psmelt(zp_rel_abund) %>%
   facet_wrap(~ OTU, scales = "free") +
   theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
 
-ggsave("Plots/t_test_sig_location.jpeg")
+ggsave("Plots/1pct/t_test_sig_location.jpeg")
 ```
 ## Wilcoxon rank-sum
 ```{r, message=FALSE, warning=FALSE}
@@ -1003,7 +1003,7 @@ if(length(significant_taxa$Genus) != 0){
   facet_wrap(~ OTU, scales = "free") +
   theme(legend.position = "none")
   locationFig
-  ggsave("Plots/wilcox_sig_location.jpeg", dpi = 300)  
+  ggsave("Plots/1pct/wilcox_sig_location.jpeg", dpi = 300)  
 }else{
     locationFig <- psmelt(zprime) %>%
     ggplot(data = ., aes(x = location, y = Abundance)) +
@@ -1015,7 +1015,7 @@ if(length(significant_taxa$Genus) != 0){
     
     locationFig
     
-    ggsave("Plots/wilcox_sig_location.jpeg", dpi = 300)
+    ggsave("Plots/1pct/wilcox_sig_location.jpeg", dpi = 300)
     
     print("No signifiant taxa via wilcoxon test for Location.")
 }
@@ -1105,7 +1105,7 @@ if(length(row.names(significant_taxa)) != 0){
         facet_wrap(~ OTU, scales = "free") +
         theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
     
-    ggsave("Plots/t_test_sig_mother_hiv.jpeg")
+    ggsave("Plots/1pct/t_test_sig_mother_hiv.jpeg")
 }else{
     print("No significant taxa based on HIV exposure")
 }
@@ -1180,7 +1180,7 @@ if(length(significant_taxa$Genus) != 0){
 
   HIV_statusFig
   
-  ggsave("Plots/wilcox_sig_HIV_Exposure.jpeg", dpi = 300)  
+  ggsave("Plots/1pct/wilcox_sig_HIV_Exposure.jpeg", dpi = 300)  
 }else{
     HIV_statusFig <- psmelt(zp_rel_abund) %>%
   ggplot(data = ., aes(x = mother_hiv, y = Abundance)) +
@@ -1193,7 +1193,7 @@ if(length(significant_taxa$Genus) != 0){
 
   HIV_statusFig
   
-  ggsave("Plots/wilcox_sig_HIV_Exposure.jpeg", dpi = 300)
+  ggsave("Plots/1pct/wilcox_sig_HIV_Exposure.jpeg", dpi = 300)
   
     print("No signifiant taxa via wilcoxon test for HIV Exposure.")
 }
@@ -1322,7 +1322,7 @@ if(length(row.names(significant_taxa)) != 0){
   facet_wrap(~ OTU, scales = "free") +
   theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
 
-ggsave("Plots/kruskal_sig_hospital_duration.jpeg")
+ggsave("Plots/1pct/kruskal_sig_hospital_duration.jpeg")
 }else{
     psmelt(zp_rel_abund) %>%
     ggplot(data = ., aes(x = as.factor(hosp_duration), y = Abundance)) +
@@ -1332,7 +1332,7 @@ ggsave("Plots/kruskal_sig_hospital_duration.jpeg")
     facet_wrap(~ OTU, scales = "free") +
     theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
 
-    ggsave("Plots/kruskal_sig_hospital_duration.jpeg")
+    ggsave("Plots/1pct/kruskal_sig_hospital_duration.jpeg")
     
     print("No significant difference based on length of hospital stay.")
 }
@@ -1452,7 +1452,7 @@ if(length(row.names(significant_taxa))> 0){
   
   sexFig
   
-  ggsave("Plots/wilcox_sig_sex.jpeg")
+  ggsave("Plots/1pct/wilcox_sig_sex.jpeg")
 }else{
     sexFig <- psmelt(zp_rel_abund) %>%
   filter(sex %in% c("Female", "Male")) %>%
@@ -1465,7 +1465,7 @@ if(length(row.names(significant_taxa))> 0){
   
   sexFig
   
-  ggsave("Plots/wilcox_sig_sex.jpeg")
+  ggsave("Plots/1pct/wilcox_sig_sex.jpeg")
     print("No significance based on sex.")
 }
 
@@ -1548,7 +1548,7 @@ adiv %>%
   facet_wrap(~ metric, scales = "free") +
   theme(legend.position="none")
 
-ggsave("Plots/shannonAndSimpson_age.jpeg")
+ggsave("Plots/1pct/shannonAndSimpson_age.jpeg")
 ```
  I think we need to do an anova to make this work...
 ```{r, message=FALSE, warning=FALSE}
@@ -1673,7 +1673,7 @@ if(length(row.names(significant_taxa)) != 0){
 
   ageFig
   
-  ggsave("Plots/kruskal_Age.jpeg")
+  ggsave("Plots/1pct/kruskal_Age.jpeg")
 }else{
     ageFig <-  psmelt(zp_rel_abund) %>%
   ggplot(data = ., aes(x = as.factor(death_age), y = Abundance)) +
@@ -1685,7 +1685,7 @@ if(length(row.names(significant_taxa)) != 0){
 
   ageFig
   
-  ggsave("Plots/kruskal_Age.jpeg")
+  ggsave("Plots/1pct/kruskal_Age.jpeg")
     print("No significant difference based on length of hospital stay.")
 }
 
@@ -1716,7 +1716,7 @@ otherVariablesFigure <- ggarrange(locationFig, sexFig, ageFig,
                     bgcolor("white")
 otherVariablesFigure
 
-ggsave("Plots/otherVariablesFigure.jpeg")
+ggsave("Plots/1pct/otherVariablesFigure.jpeg")
 ```
 
 # Linear Regression

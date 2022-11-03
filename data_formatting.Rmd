@@ -1,0 +1,119 @@
+---
+title: "Formatting data"
+author: "Aubrey Odom and Jessica McClintock"
+date: '2022-05-24'
+output: html_document
+---
+
+# Setup
+```{R}
+suppressPackageStartupMessages({
+  # General use
+  library(tidyverse)
+  library(knitr)
+  library(magrittr)
+    
+  # Data formats
+  library(animalcules)
+  library(MultiAssayExperiment)
+    
+})
+```
+
+# 16S microbe abundances
+
+The purpose of this code is to take the final formatted Multi-Assay Experiment output by Animalcules and label as "Other" all the taxons belonging to genera that represent <1% average relative abundances across samples. 
+
+The resulting data object is a SummarizedExperiment object saved as "ZPRIME_1pct.rds" and csv files for sample data ("Assay_annotation"), taxon information ("Assay_taxonomy") and count data ("Assay_count").
+
+This file can be modified to create species files by changing instances of "genus" to "species", except line 81 where "genus =" must remain. It can also be modified to filter for 1% of the relative abundances by changing all "0.001" to "0.01" and all "point1pct" to "1pct"
+
+## Initial data extraction
+```{r plotting}
+# Read in MAE of data
+OG_dat <- readRDS("genus/data/ZPRIME_raw_revised.rds")
+dat <- OG_dat[["MicrobeGenetics"]]
+
+# Extract metadata, taxonomic info, and counts
+tax_table <- as.data.frame(SummarizedExperiment::rowData(dat))
+sam_table <- as.data.frame(SummarizedExperiment::colData(dat))
+counts_table <- as.data.frame(SummarizedExperiment::assay(
+  dat, "MGX"))[, rownames(sam_table)]
+```
+
+## Identify species < 0.001 average relative genus abundance as other
+```{R}
+# Extract metadata, taxonomic information, and counts
+#tax_table
+#sam_table
+
+all_relabu_genus <- counts_table |>
+  as.matrix() |>
+  # Get rel abu within samokes
+  prop.table(margin = 2) |>
+  as_tibble() |>
+  bind_cols(genus = tax_table$genus) |>
+  relocate(genus) |>
+  group_by(genus) |>
+  # Sum rel abu within samples/columns for genera
+  summarise(across(.fns = sum)) %>%
+  # Sum everything but the first columm ("phylum")
+  mutate(allmeans = apply(.[,-1], 1, mean)) |>
+  select(genus, allmeans) |>
+  mutate(genus = replace(genus, is.na(genus), "Unknown")) |>
+  arrange(desc(allmeans)) |>
+  mutate(lessthan1pct = allmeans < 0.001)
+
+# Identify species in other
+othergenera <- all_relabu_genus %>%
+  filter(lessthan1pct == TRUE) |>
+  select(genus) |> unlist() |> unname()
+
+```
+
+## Use the identified taxa to update the tax, identifided taxon tables
+```{R}
+# Replace tax table
+tax_table_other <- tax_table |>
+  mutate(#genus = replace(genus, is.na(genus), "Unknown"),
+         species = replace(species, genus %in% othergenera, "Other"),
+         genus = replace(genus, genus %in% othergenera, "Other"),
+         family = replace(family, genus %in% othergenera, "Other"),
+         order = replace(order, genus %in% othergenera, "Other"),
+         class = replace(class, genus %in% othergenera, "Other"),
+         phylum = replace(phylum, genus %in% othergenera, "Other"),
+         superkingdom = replace(superkingdom, genus %in% othergenera, "Other"))
+
+# Resum the counts table
+counts_other <- counts_table |>
+  bind_cols(genus = tax_table_other$genus) |>
+  group_by(genus) |>
+  summarise(across(.fns = sum)) |>
+  tibble::column_to_rownames("genus")
+
+# Adjust tax table accordingly
+tax_table_other <- tax_table_other %>%
+  distinct(genus, .keep_all = TRUE) %>%
+  arrange(genus)
+
+rownames(tax_table_other) <- tax_table_other$genus
+
+```
+
+## Create data files for Analysis
+```{R}
+#write.csv(tax_table_other, "genus/data/point1pct/Assay_taxonomy_point1pct.csv")
+#write.csv(sam_table, "genus/data/point1pct/Assay_annotation_point1pct.csv")
+#write.csv(counts_other, "genus/data/point1pct/Assay_count_point1pct.csv")
+```
+
+## How many genera?
+Provided count information for writing paper
+```{R}
+length(unique(tax_table$genus))
+
+length(unique(tax_table_other$genus))
+```
+
+
+

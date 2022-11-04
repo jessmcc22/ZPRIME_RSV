@@ -37,4 +37,4 @@ MultiQC report is available [here](https://scc-ondemand2.bu.edu/pun/sys/files/fs
 ### RefSeq
 PathoScope RefSeq libraries were custom-configured.
 The RefSeq 2018 indices can be downloaded [here](https://drive.google.com/file/d/13CP5dQz5GxSQsWZh2qHowf8IXZIAFkov/view?usp=sharin).
-Up-to-date RefSeq indices may be obtained by using the `download_refseq()1` function from the [MetaScope package](https://compbiomed.github.io/metascope-docs/index.html).
+Up-to-date RefSeq indices may be obtained by using the `download_refseq()` function from the [MetaScope package](https://compbiomed.github.io/metascope-docs/index.html).

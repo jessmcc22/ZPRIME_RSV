@@ -32,7 +32,7 @@ genus/data/point1pct/Assay_taxonomy_point1pct.csv<br>
 Similar Data Files can be found for species in the species folder<br>
 
 ### MultiQC 
-MultiQC report is available [here](https://scc-ondemand2.bu.edu/pun/sys/files/fs/restricted/projectnb/infant-microbiome/work/jessmcc/rsv/fastqc_result/multiqc_report.html).
+MultiQC report is available and stored as "multiqc_report.html" in the ZPRIME main directory.
 
 ### RefSeq
 PathoScope RefSeq libraries were custom-configured.

@@ -110,8 +110,8 @@ relativeAbundance <- function(x){
 
 zp_rel_abund <- transform_sample_counts(zprime, relativeAbundance)
 
-plot_bar(zp_rel_abund, fill = "genus") +
-  geom_bar(aes(color = genus, fill = genus), stat = "identity", position = "stack") +
+plot_bar(zp_rel_abund, fill = "species") +
+  geom_bar(aes(color = species, fill = species), stat = "identity", position = "stack") +
   labs(x = "Sample", y = "Relative Abundance\n") +
   facet_wrap(~state, scales = "free") +
   theme(panel.background = element_blank(),
@@ -124,7 +124,7 @@ plot_bar(zp_rel_abund, fill = "genus") +
 ggsave("Plots/point1/relativeAbundance.jpeg")
 ```
 
-## Testing for a difference in genus level abundance 
+## Testing for a difference in species level abundance 
 Analogous to a two-sample t-test, but instead we are testing whether taxa 
 frequencies observed in both groups of metagenomic samples are equal. A 
 Dirichlet-Multinomial distribution is assumed for the data.  The HMP 
@@ -132,11 +132,11 @@ test null hypothesis is that there is no difference in the distribution
 of phyla between groups. p-values > 0.05 support the null hypothesis.
 
 ```{r, message=FALSE, warning=FALSE}
-zp_genus <- tax_glom(zp_rel_abund, taxrank = "genus") #relative abundance
-zp_genus_counts <- tax_glom(zprime, taxrank = "genus") #absolute abundance by genus
+zp_species <- tax_glom(zp_rel_abund, taxrank = "species") #relative abundance
+zp_species_counts <- tax_glom(zprime, taxrank = "species") #absolute abundance by species
 
-zp_pos <- subset_samples(zp_genus_counts, state == "RSV+")
-zp_neg <- subset_samples(zp_genus_counts, state =="RSV-")
+zp_pos <- subset_samples(zp_species_counts, state == "RSV+")
+zp_neg <- subset_samples(zp_species_counts, state =="RSV-")
 
 zp_pos_otu <- otu_table(zp_pos) %>%
   data.frame() %>%
@@ -156,7 +156,7 @@ group_data <- list(zp_pos_otu, zp_neg_otu)
 Alpha diversity quantifies diversity within individual samples and compares the differences across groups. These analysis aim to determine the number of species in a given sample (richness) and compare averages in one group (RSV+) to another group (RSV-). Some methods will also compare evenness, or how the abundance of each individual species in a sample compares to the abundance of other species (frequency). The Shannon index combines richness and frequency. 
 
 ### Shannon and Simpson Indexes
-Comparing the total number of observed genera.
+Comparing the total number of observed species.
 #### Visualization
 ```{r, message=FALSE, warning=FALSE}
 adiv <- data.frame(
@@ -171,7 +171,7 @@ adiv %>%
   ggplot(aes(x = Status, y = value)) +
   geom_boxplot(outlier.shape = NA) +
   geom_jitter(aes(color = Status), height = 0, width = .2) +
-  ggtitle("Genera") +
+  ggtitle("Species") +
   labs(x = "", y = "") +
   facet_wrap(~ metric, scales = "free") +
   theme(legend.position="none", plot.title = element_text(hjust = 0.5))+
@@ -204,7 +204,7 @@ wilcox.test(Simpson ~ Status, data = adiv, conf.int = TRUE)
 Beta Diversity aims to analyze feature dissimilarity between each pair of samples and utilize distance analysis, like Bray-Curtis or UniFrac. Quantitivate methods, like Bray-Curtis or weighted UniFrac, look at abundance of features in determining distances whereas Qualitative measures, like unweighted uniFrac or binary Jaccard, only look at presence or absence of features. PERMANOVA is used to determine clustering between groups.These are then visualized via PCA or PCoA
 
 ### HeatMap 
-Visualize the Bray-curtis dissimilarity (as two samples share fewer taxa, the number increases 0 for exact same composition, 1 for no shared genera) results.
+Visualize the Bray-curtis dissimilarity (as two samples share fewer taxa, the number increases 0 for exact same composition, 1 for no shared species) results.
 
 ```{r, message=FALSE, warning=FALSE, fig.width=10}
 zp_scale <- zp_rel_abund %>%
@@ -273,7 +273,7 @@ ggsave("Plots/point1/BrayCurtisFigure.jpeg")
 ```
 
 ## Differential Abundance Testing
-### Wilcoxon-rank sum to determine significant difference between any specific genus
+### Wilcoxon-rank sum to determine significant difference between any specific species
 Perform a  non-parametric Wilcoxon rank-sum test where the null hypothesis is equal medians between states. 
 
 ```{r message=FALSE, warning=FALSE, fig.width=10}
@@ -292,8 +292,8 @@ zp_neg_otu<- otu_table(zp_neg)%>%
   t() %>%
   as.data.frame()
 
-for(genus in colnames(zp_pos_otu)){
-    wilcox_test[[genus]] <- round(wilcox.test(zp_pos_otu[[genus]], zp_neg_otu[[genus]])$p.value, 4)
+for(species in colnames(zp_pos_otu)){
+    wilcox_test[[species]] <- round(wilcox.test(zp_pos_otu[[species]], zp_neg_otu[[species]])$p.value, 4)
 }
 
 wilcox_test <- as.data.frame(wilcox_test, row.names = "RSV_state") %>%
@@ -306,21 +306,21 @@ wilcox_test <- wilcox_test %>%
 print(wilcox_test)
 ```
 #### Visulaizing Significantly Significant Abundance Grouped by RSV state
-Allows visualization of each microbe that has a wilcoxon rankn sum p value <0.06.
+Allows visualization of each microbe that has a wilcoxon rank sum p value <0.06.
 
 ```{r message=FALSE, warning=FALSE, fig.width=5}
 
 significant_taxa <-  wilcox_test %>%
     as.data.frame() %>%
-    filter(RSV_state < 0.06)
+    filter(RSV_state < 0.05)
 
 if(length(significant_taxa$RSV_state) != 0){
  
 print(psmelt(zp_rel_abund) %>%
-  filter(genus %in% row.names(significant_taxa)) %>%
+  filter(species %in% row.names(significant_taxa)) %>%
   ggplot(data = ., aes(x = state, y = Abundance)) +
   geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +  
+  geom_jitter(aes(color = species), height = 0, width = .2) +  
   labs(title = "Relative Abundance based on RSV Status", x = "", y = "Relative Abundance\n") +
   facet_wrap(~ OTU, scales = "free") +
   theme(legend.position = "none") +
@@ -335,11 +335,11 @@ ggsave("Plots/point1/wilcox_test_sig_state.jpeg", dpi = 300, width = 5, height =
 ```
 
 # Location
-## Testing for a difference in genus level abundance by location 
+## Testing for a difference in species level abundance by location 
 
 ```{r, message=FALSE, warning=FALSE}
-zp_BID <- subset_samples(zp_genus_counts, location == "BID")
-zp_Hospital <- subset_samples(zp_genus_counts, location == "Hospital")
+zp_BID <- subset_samples(zp_species_counts, location == "BID")
+zp_Hospital <- subset_samples(zp_species_counts, location == "Hospital")
 
 zp_BID_otu <- otu_table(zp_BID) %>%
   data.frame() %>%
@@ -401,7 +401,7 @@ wilcox.test(Simpson ~ Status, data = adiv, conf.int = TRUE)
 
 ## Differential Abundance Testing
 ### Wilcoxon rank-sum for significant difference between location
-Perform wilcoxon rank sum to determine if any genus differs significantly
+Perform wilcoxon rank sum to determine if any species differs significantly
 between early facility deaths or community deaths.
 ```{r message=FALSE, warning=FALSE, fig.width=10}
 zp_clr_BID <- subset_samples(zp_rel_abund, location =="BID")
@@ -419,8 +419,8 @@ zp_clr_hospital_otu <- otu_table(zp_clr_hospital) %>%
 
 p_vals <- list()
 
-for(genus in colnames(zp_clr_BID_otu)){
-    p_vals[[genus]] <-round(wilcox.test(zp_clr_BID_otu[[genus]], zp_clr_hospital_otu[[genus]])$p.value, 4)
+for(species in colnames(zp_clr_BID_otu)){
+    p_vals[[species]] <-round(wilcox.test(zp_clr_BID_otu[[species]], zp_clr_hospital_otu[[species]])$p.value, 4)
 }
 
 p_vals <- as.data.frame(p_vals, row.names = "location") %>%
@@ -444,10 +444,10 @@ significant_taxa <-  wilcox_test %>%
 
 if(length(significant_taxa$location) != 0){
     locationFig <- psmelt(zp_rel_abund) %>%
-              filter(genus %in% row.names(significant_taxa)) %>%
+              filter(species %in% row.names(significant_taxa)) %>%
               ggplot(data = ., aes(x = location, y = Abundance)) +
               geom_boxplot(outlier.shape  = NA) +
-              geom_jitter(aes(color = genus), height = 0, width = .2) +
+              geom_jitter(aes(color = species), height = 0, width = .2) +
               labs(title = "Relative Abundance Based on Location", x = "", y = "Abundance\n") +
               facet_wrap(~ OTU, scales = "free") +
               theme(legend.position = "none") +
@@ -462,11 +462,11 @@ if(length(significant_taxa$location) != 0){
 ```
 
 # HIV Exposure
-## Testing for a difference in genus level abundance by HIV Exposure Status
+## Testing for a difference in species level abundance by HIV Exposure Status
 
 ```{r, message=FALSE, warning=FALSE}
-zp_HIV_neg <- subset_samples(zp_genus_counts, mother_hiv == "Unexposed")
-zp_HIV_pos <- subset_samples(zp_genus_counts, mother_hiv == "Exposed")
+zp_HIV_neg <- subset_samples(zp_species_counts, mother_hiv == "Unexposed")
+zp_HIV_pos <- subset_samples(zp_species_counts, mother_hiv == "Exposed")
 
 zp_HIV_neg_otu <- otu_table(zp_HIV_neg) %>%
   data.frame() %>%
@@ -528,7 +528,7 @@ wilcox.test(Simpson ~ Status, data = adiv, conf.int = TRUE)
 
 ## Differential Abundance Testing
 ### Wilcoxon rank sum test for significant difference between HIV status
-Perform wilcoxon rank sum to determine if any genus differs significantly
+Perform wilcoxon rank sum to determine if any species differs significantly
 between mother's HIV status.
 ```{r message=FALSE, warning=FALSE, fig.width=10}
 zp_HIV_neg <- subset_samples(zp_rel_abund, mother_hiv == "Unexposed")
@@ -546,8 +546,8 @@ zp_HIV_pos_otu <- otu_table(zp_HIV_pos) %>%
 
 p_vals <- list()
 
-for(genus in colnames(zp_HIV_neg_otu)){
-    p_vals[[genus]] <- round(wilcox.test(zp_HIV_neg_otu[[genus]], zp_HIV_pos_otu[[genus]])$p.value, 4)
+for(species in colnames(zp_HIV_neg_otu)){
+    p_vals[[species]] <- round(wilcox.test(zp_HIV_neg_otu[[species]], zp_HIV_pos_otu[[species]])$p.value, 4)
 }
 
 p_vals <- as.data.frame(p_vals, row.names = "HIV_status") %>%
@@ -569,10 +569,10 @@ significant_taxa <-  wilcox_test %>%
 
 if(length(row.names(significant_taxa)) != 0){
     print(psmelt(zp_rel_abund) %>%
-        filter(genus %in% row.names(significant_taxa)) %>%
+        filter(species %in% row.names(significant_taxa)) %>%
         ggplot(data = ., aes(x = as.factor(mother_hiv), y = Abundance)) +
         geom_boxplot(outlier.shape  = NA) +
-        geom_jitter(aes(color = genus), height = 0, width = .2) +
+        geom_jitter(aes(color = species), height = 0, width = .2) +
         labs(title = "Relative Abundance Based on Mother's HIV Status", 
              x = "", y = "Abundance\n") +
         facet_wrap(~ OTU, scales = "free") +
@@ -586,11 +586,11 @@ if(length(row.names(significant_taxa)) != 0){
 ```
 
 # Sex
-## Testing for a difference in genus level abundance by Sex
+## Testing for a difference in species level abundance by Sex
 ```{r, message=FALSE, warning=FALSE}
-zp_female <- subset_samples(zp_genus_counts, sex == "Female")
-zp_male <- subset_samples(zp_genus_counts, sex == "Male")
-zp_unknown <- subset_samples(zp_genus_counts, sex == "Unknown")
+zp_female <- subset_samples(zp_species_counts, sex == "Female")
+zp_male <- subset_samples(zp_species_counts, sex == "Male")
+zp_unknown <- subset_samples(zp_species_counts, sex == "Unknown")
 
 zp_female_otu <- otu_table(zp_female) %>%
   data.frame() %>%
@@ -659,8 +659,8 @@ wilcox.test(Simpson ~ Status, data = adiv, conf.int = TRUE)
 ```
 
 ## Differential Abundance Testing
-### Wilcox for significant difference between Sex for any specific genus
-Perform two sample t-test to determine if any genus differs significantly
+### Wilcox for significant difference between Sex for any specific species
+Perform two sample t-test to determine if any species differs significantly
 between early facility deaths or community deaths.
 
 ```{r message=FALSE, warning=FALSE, fig.width=10}
@@ -693,8 +693,8 @@ all_data <- rbind(zp_female_otu, zp_male_otu)
 
 p_vals <- list()
 
-for(genus in microbes){
-    p_vals[[genus]] <- round(wilcox.test(zp_female_otu[[genus]], zp_male_otu[[genus]])$p.value, 4)
+for(species in microbes){
+    p_vals[[species]] <- round(wilcox.test(zp_female_otu[[species]], zp_male_otu[[species]])$p.value, 4)
 }
 
 p_vals <- as.data.frame(p_vals, row.names = "sex") %>%
@@ -718,11 +718,11 @@ significant_taxa <-  wilcox_test %>%
 
 if(length(row.names(significant_taxa))> 0){
   sexFig <- psmelt(zp_rel_abund) %>%
-  filter(genus %in% row.names(significant_taxa)) %>%
+  filter(species %in% row.names(significant_taxa)) %>%
   filter(sex %in% c("Female", "Male")) %>%
   ggplot(data = ., aes(x = sex, y = Abundance)) +
   geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
+  geom_jitter(aes(color = species), height = 0, width = .2) +
   labs(title = "Relative Abundance Based on Sex", x = "", y = "Abundance\n") +
   facet_wrap(~ OTU, scales = "free") +
   theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18)) +
@@ -738,13 +738,13 @@ if(length(row.names(significant_taxa))> 0){
 ```
 
 # Age
-## Testing for a difference in genus level abundance by location 
+## Testing for a difference in species level abundance by location 
 
 ```{r, message=FALSE, warning=FALSE}
-zp_newborn <- subset_samples(zp_genus_counts, death_age == 0)
-zp_one_month <- subset_samples(zp_genus_counts, death_age == 1)
-zp_two_month <- subset_samples(zp_genus_counts, death_age == 2)
-zp_five_month <- subset_samples(zp_genus_counts, death_age == 4)
+zp_newborn <- subset_samples(zp_species_counts, death_age == 0)
+zp_one_month <- subset_samples(zp_species_counts, death_age == 1)
+zp_two_month <- subset_samples(zp_species_counts, death_age == 2)
+zp_five_month <- subset_samples(zp_species_counts, death_age == 4)
 
 zp_newborn_otu <- otu_table(zp_newborn) %>%
   data.frame() %>%
@@ -772,14 +772,14 @@ group_data <- list(zp_newborn_otu, zp_one_month_otu, zp_two_month_otu, zp_five_m
 
 ## Alpha Diversity 
 ### Shannon and Simpson Indexes
-Comparing the total number of observed genera.
+Comparing the total number of observed species.
 
 ```{r, message=FALSE, warning=FALSE}
 adiv <- data.frame(
-  "Observed" = estimate_richness(zp_genus_counts, measures = "Observed"),
-  "Shannon" = estimate_richness(zp_genus_counts, measures = "Shannon"),
-  "Simpson" = estimate_richness(zp_genus_counts, measures = "Simpson"),
-  "Status" = sample_data(zp_genus_counts)$death_age)
+  "Observed" = estimate_richness(zp_species_counts, measures = "Observed"),
+  "Shannon" = estimate_richness(zp_species_counts, measures = "Shannon"),
+  "Simpson" = estimate_richness(zp_species_counts, measures = "Simpson"),
+  "Status" = sample_data(zp_species_counts)$death_age)
 
 adiv %>%
   gather(key = metric, value = value, c("Observed", "Shannon", "Simpson")) %>%
@@ -820,8 +820,8 @@ kruskal.test(Simpson ~ Status, data = adiv)
 
 ```
 ## Differential Abundance Testing
-### Kruskal-Wallis for significant difference between Age for any specific genus
-Perform non parametric Kruskal-Wallis to determine if any genus differs significantly
+### Kruskal-Wallis for significant difference between Age for any specific species
+Perform non parametric Kruskal-Wallis to determine if any species differs significantly
 between age of death.
 
 ```{r message=FALSE, warning=FALSE, fig.width=10}
@@ -865,8 +865,8 @@ all_data <- rbind(zp_zero_otu, zp_one_otu, zp_two_otu, zp_four_otu)
 
 p_vals <- list()
 
-for(genus in microbes){
-    p_vals[[genus]] <- round(kruskal.test(all_data[[genus]] ~ all_data$age)$p.value, 4)
+for(species in microbes){
+    p_vals[[species]] <- round(kruskal.test(all_data[[species]] ~ all_data$age)$p.value, 4)
 }
 
 p_vals <- as.data.frame(p_vals, row.names = "age") %>%
@@ -890,10 +890,10 @@ significant_taxa <-  wilcox_test %>%
 
 if(length(row.names(significant_taxa)) != 0){
   ageFig <-  psmelt(zp_rel_abund) %>%
-  filter(genus %in% row.names(significant_taxa)) %>%
+  filter(species %in% row.names(significant_taxa)) %>%
   ggplot(data = ., aes(x = as.factor(death_age), y = Abundance)) +
   geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
+  geom_jitter(aes(color = species), height = 0, width = .2) +
   labs(title = "Relative Abundance Based on Age", x = "", y = "Abundance\n") +
   facet_wrap(~ OTU, scales = "free") +
   theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18)) +

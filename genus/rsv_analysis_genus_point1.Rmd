@@ -28,6 +28,7 @@ library(rms)
 library(breakaway)
 library(png)
 library(ggpubr)
+library(paletteer)
 ```
 
 # Read in Data
@@ -42,7 +43,7 @@ samples_df <- read_csv("data/point1pct/Assay_annotation_point1pct.csv")
 
 ## Create Phyloseq Object
 All analysis was conducted based on a phyloseq object. 
-Also changed metadata labels to be more descriptive for table and graphing 
+Changed metadata labels to be more descriptive for table and graphing 
 purposes.
 
 ```{r message=FALSE, warning=FALSE}
@@ -89,9 +90,7 @@ zprime <- phyloseq(OTU, TAX, samples)
 
 # Chi-Squared test comparing demographic information
 Test to see if there is a difference in the demographic make up of the HIV+
-group compared to the HIV- group using chi-square goodness of fit since this is
-qualitative data.
-
+group compared to the HIV- group using chi-square goodness of fit since this is qualitative data.
 
 ```{r message=FALSE, warning=FALSE}
 genderCounts <- table(samples_df$state, samples_df$gender)
@@ -106,178 +105,14 @@ chi_stats$hospitalized <- chisq.test(samples_df$state, samples_df$hosp_duration)
 print(chi_stats)
 ```
 # Create color palette that represents 15 organisms well
-Need to create this 
+Selected color palette for all graphing
 ```{r message=FALSE, warning=FALSE}
-
-    
-```
-
-# Normalization
-## Raw Data Check
-
-```{r message=FALSE, warning=FALSE, fig.width=10}
-zp_genus_counts <- tax_glom(zprime, taxrank = "genus")
-
-zp_pos <- subset_samples(zp_genus_counts, state == "RSV+")
-zp_neg <- subset_samples(zp_genus_counts, state =="RSV-")
-
-zp_pos_otu <- otu_table(zp_pos) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame()
-
-zp_neg_otu <- otu_table(zp_neg) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame()
-
-psmelt(zp_pos) %>%
-  ggplot(data = ., aes(x = Abundance)) +
-  geom_histogram() +
-  labs(title = "Histograms RSV+ of Abudance Counts", x = "") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none")
-
-psmelt(zp_neg) %>%
-  ggplot(data = ., aes(x = Abundance)) +
-  geom_histogram() +
-  labs(title = "Histograms of RSV- Abudance Counts", x = "") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none")
-
-posPvalue <- c()
-negPvalue <- c()
-for(genus in colnames(zp_pos_otu)){
-    posPvalue[[genus]] <- shapiro.test(zp_pos_otu[[genus]])$p.value
-    negPvalue[[genus]] <- shapiro.test(zp_neg_otu[[genus]])$p.value
-}
-
-normalizedPvals <- cbind(posPvalue, negPvalue)
-```
-
-## Log Normalization, pseudo count
-Heavy right skew to the data, so do a log transform (with a peudocount of 1 so 
-that 0's will be log adjusted) and recheck for normality
-
-```{r message=FALSE, warning=FALSE, fig.width=10}
-#zp_log <- microbiome::transform(zprime, "log10")
-
-otu_table(zp_neg) <- log(otu_table(zp_neg) + 1)
-otu_table(zp_pos) <- log(otu_table(zp_pos) + 1)
-
-psmelt(zp_pos) %>%
-  ggplot(data = ., aes(x = Abundance)) +
-  geom_histogram() +
-  labs(title = "Histograms RSV+ of Abudance Counts", x = "") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none")
-
-psmelt(zp_neg) %>%
-  ggplot(data = ., aes(x = Abundance)) +
-  geom_histogram() +
-  labs(title = "Histograms of RSV- Abudance Counts", x = "") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none")
-
-zp_pos_otu <- otu_table(zp_pos) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame()
-
-zp_neg_otu <- otu_table(zp_neg) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame()
-
-logPosPvalue <- c()
-logNegPvalue <- c()
-
-for(genus in colnames(zp_pos_otu)){
-    logPosPvalue[[genus]] <- shapiro.test(zp_pos_otu[[genus]])$p.value
-    logNegPvalue[[genus]] <- shapiro.test(zp_neg_otu[[genus]])$p.value
-}
-
-normalizedPvals <- cbind(normalizedPvals, logPosPvalue, logNegPvalue)
-normalizedPvals
-```
-## Center Log Ratio Normalizartion
-Log ratio had better results and looked more normal, but has a heavy left skew from the 0s and still didn't pass Shapiro-Wilks test. So, try to do centered log ratio as advised in a number of microbiome analysis guides.
-```{r, message=FALSE, warning=FALSE}
-zp_clr <- microbiome::transform(zprime, "clr")  #centered log ratio, log(x1/mean(x))
-
-zp_clr_pos <- subset_samples(zp_clr, state == "RSV+")
-zp_clr_neg <- subset_samples(zp_clr, state =="RSV-")
-
-zp_clr_pos_otu <- otu_table(zp_clr_pos) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame()
-
-zp_clr_neg_otu <- otu_table(zp_clr_neg) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame()
-
-psmelt(zp_clr_pos) %>%
-  ggplot(data = ., aes(x = Abundance)) +
-  geom_histogram() +
-  labs(title = "Histograms of RSV+ clr Abudance Counts", x = "") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none")
-
-psmelt(zp_clr_neg) %>%
-  ggplot(data = ., aes(x = Abundance)) +
-  geom_histogram() +
-  labs(title = "Histograms of RSV- clr Abudance Counts", x = "") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none")
-
-#zp_clr_pos_otu[zp_clr_pos_otu == 0] <- NA
-#zp_clr_neg_otu[zp_clr_neg_otu == 0] <- NA
-
-clrPosPvalue <- c()
-clrNegPvalue <- c()
-for(genus in colnames(zp_clr_pos_otu)){
-    clrPosPvalue[[genus]] <- shapiro.test(zp_clr_pos_otu[[genus]])$p.value
-    clrNegPvalue[[genus]] <- shapiro.test(zp_clr_neg_otu[[genus]])$p.value
-}
-
-normalizedPvals <- cbind(normalizedPvals, clrPosPvalue, clrNegPvalue)
-print(normalizedPvals)
+chosen_pal_16 <- "awtools::bpalette"
 ```
 
 # RSV Status
-##Visualizing Absolute Abundance 
-Visualization of absolute abundances to see if there is any microbe that is more
-or less abundant in samples.
-
-```{r message=FALSE, warning=FALSE}
-
-plot_bar(zprime, fill = "genus") +
-  geom_bar(aes(color = genus, fill = genus), stat = "identity", position = "stack") +
-  labs(x = "Sample", y = "Absolute Abundance\n") +
-  facet_wrap(~state, scales = "free") +
-  theme(panel.background = element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        legend.key.size = unit(0.2, "cm"))
-```
-
-## Mean Absolute Abundance by Disease State - Genus 
-Visualize what the microbiome of RSV+ and RSV- samples looks like.
-
-```{r messafe=FALSE, warning=FALSE}
-plot_bar(zprime, x = "state", fill = "genus")+ 
-    geom_bar(aes(color=genus, fill=genus), 
-             stat = "identity", position = "stack")+
-    theme(legend.key.size = unit(0.2, "cm"))
-```
-
 ## Visualizing Relative Abundance 
-Relative abundances show the microbes present in each samples' microbiome as a
-percentage of the whole microbiome. Percentages will differ from sample to 
-sample even if actual counts of specific microbes are similar. Or, percentages
-may seem similar when the counts are actually VERY different.
+Relative abundances show the microbes present in each samples' microbiome as a percentage of the whole microbiome. Percentages will differ from sample to sample even if actual counts of specific microbes are similar. Or, percentages may seem similar when the counts are actually VERY different.
 
 ```{r message=FALSE, warning=FALSE}
 relativeAbundance <- function(x){
@@ -298,42 +133,17 @@ plot_bar(zp_rel_abund, fill = "genus") +
 ggsave("Plots/point1/relativeAbundance.jpeg")
 ```
 
-
-## Mean Relative Abundance by Disease State - Genus 
-
-```{r messafe=FALSE, warning=FALSE}
-plot_bar(zp_rel_abund, x = "state", fill = "genus")+ 
-    geom_bar(aes(color=genus, fill=genus), 
-             stat = "identity", position = "stack")+
-    theme(legend.key.size = unit(0.2, "cm"))
-
-ggsave("Plots/point1/meanRelativeAbundance.jpeg")
-```
-
-## Visulaizing Relative Abundance Grouped by RSV state
-Allows visualization of each individual microbe for easier visual comparison.
-
-```{r message=FALSE, warning=FALSE, fig.width=10, fig.height=20}
-zp_genus <- tax_glom(zp_rel_abund, taxrank = "genus") #relative abundance
-zp_genus_counts <- tax_glom(zprime, taxrank = "genus") #absolute abundance by genus
-
-psmelt(zp_genus) %>%
-  ggplot(data = ., aes(x = state, y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "Relative Abundance based on RSV Status", x = "", y = "Relative Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none")
-```
 ## Testing for a difference in genus level abundance 
 Analogous to a two-sample t-test, but instead we are testing whether taxa 
 frequencies observed in both groups of metagenomic samples are equal. A 
 Dirichlet-Multinomial distribution is assumed for the data.  The HMP 
 test null hypothesis is that there is no difference in the distribution 
 of phyla between groups. p-values > 0.05 support the null hypothesis.
-Not sure if this is a helpful test.
 
 ```{r, message=FALSE, warning=FALSE}
+zp_genus <- tax_glom(zp_rel_abund, taxrank = "genus") #relative abundance
+zp_genus_counts <- tax_glom(zprime, taxrank = "genus") #absolute abundance by genus
+
 zp_pos <- subset_samples(zp_genus_counts, state == "RSV+")
 zp_neg <- subset_samples(zp_genus_counts, state =="RSV-")
 
@@ -352,33 +162,12 @@ group_data <- list(zp_pos_otu, zp_neg_otu)
 ```
 
 ## Alpha Diversity 
-Alpha diversity quantifies diversity within individual samples and compares the
-differences across groups. These analysis aim to determine the number of species
-in a given sample (richness) and compare averages in one group (RSV+) to another 
-group (RSV-). Some methods will also compare evenness, or how the abundance of 
-each individual species in a sample compares to the abundance of other species
-(frequency). The Shannon index combines richness and frequency. 
-
-### OTU and read Count Correlation
-```{r}
-ggplot(data = data.frame("total_reads" =  phyloseq::sample_sums(zprime),
-                         "observed" = phyloseq::estimate_richness(zprime, measures = "Observed")[, 1]),
-       aes(x = total_reads, y = observed)) +
-  geom_point() +
-  geom_smooth(method="lm", se = FALSE) +
-  labs(x = "\nTotal Reads", y = "Observed Richness\n")
-
-```
-Observed OTUs are slightly correlated with total read count
+Alpha diversity quantifies diversity within individual samples and compares the differences across groups. These analysis aim to determine the number of species in a given sample (richness) and compare averages in one group (RSV+) to another group (RSV-). Some methods will also compare evenness, or how the abundance of each individual species in a sample compares to the abundance of other species (frequency). The Shannon index combines richness and frequency. 
 
 ### Shannon and Simpson Indexes
 Comparing the total number of observed genera.
-
+#### Visualization
 ```{r, message=FALSE, warning=FALSE}
-
-#(zp_rare <- rarefy_even_depth(zprime, rngseed = 123, replace = FALSE))
-# set seed to 123 to create a repeatable random sampling, not recommended to use subsampling
-
 adiv <- data.frame(
   "Observed" = estimate_richness(zprime, measures = "Observed"),
   "Shannon" = estimate_richness(zprime, measures = "Shannon"),
@@ -396,10 +185,10 @@ adiv %>%
   facet_wrap(~ metric, scales = "free") +
   theme(legend.position="none", plot.title = element_text(hjust = 0.5))
 
-ggsave("Plots/point1/shannonAndSimpson_state.jpeg")
+ggsave("Plots/point1/shannonAndSimpson/state.jpeg")
 ```
 
-
+#### Statistical Testing
 ```{r, message=FALSE, warning=FALSE}
 adiv %>%
   group_by(Status) %>%
@@ -420,44 +209,10 @@ wilcox.test(Simpson ~ Status, data = adiv, conf.int = TRUE)
 
 ```
 ## Beta Diversity 
-Beta Diversity aims to analyze feature dissimilarity between each pair of 
-samples and utilize distance analysis, like Bray-Curtis or UniFrac. Quantitivate
-methods, like Bray-Curtis or weighted UniFrac, look at abundance of features in 
-determining distances whereas Qualitative measures, like unweighted uniFrac or 
-binary Jaccard, only look at presence or absence of features. PERMANOVA is 
-used to determine clustering between groups.These are then visualized via PCA
-or PCoA
-
-### Heirarchical Clustering 
-Bray-curtis dissimilarity (as two samples share fewer taxa, the number increases
-0 for exact same composition, 1 for no shared genera), then use Ward's
-clustering to visualize the results. Basically want to see if samples will
-cluster by state and thus state share similar genera.
-
-```{r, message=FALSE, warning=FALSE, fig.width=10}
-#Extract OTU table and compute BC
-zp_rel_otu <- otu_table(zp_rel_abund) %>%
-  as.data.frame() %>%
-  t() #vegan requires each row to be a sample and column to be data
-
-bc_dist <- vegan::vegdist(zp_rel_otu, method = "bray")
-min(bc_dist)
-max(bc_dist)
-mean(bc_dist)
-median(bc_dist)
-
-ward <- as.dendrogram(hclust(bc_dist, method = "ward.D2"))
-#Provide color codes
-meta <- data.frame(sample_data(zp_rel_abund))
-colorCode <- c("RSV+" = "red", "RSV-" = "blue")
-labels_colors(ward) <- colorCode[meta$state][order.dendrogram(ward)]
-#Plot
-plot(ward)
-
-```
+Beta Diversity aims to analyze feature dissimilarity between each pair of samples and utilize distance analysis, like Bray-Curtis or UniFrac. Quantitivate methods, like Bray-Curtis or weighted UniFrac, look at abundance of features in determining distances whereas Qualitative measures, like unweighted uniFrac or binary Jaccard, only look at presence or absence of features. PERMANOVA is used to determine clustering between groups.These are then visualized via PCA or PCoA
 
 ### HeatMap 
-Another way to visualize the Bray-Curtis dissimilarity results
+Visualize the Bray-curtis dissimilarity (as two samples share fewer taxa, the number increases 0 for exact same composition, 1 for no shared genera) results.
 
 ```{r, message=FALSE, warning=FALSE, fig.width=10}
 zp_scale <- zp_rel_abund %>%
@@ -479,65 +234,11 @@ p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10, colo
 ggsave("Plots/point1/heatmap.jpeg")
 ```
 
-### PCA
-Normalize data with the centered log ratio and then use oridinate to run PCA
-with Bray-Curtis distance (which is the default).
-https://rdrr.io/bioc/phyloseq/man/ordinate.html
-http://ordination.okstate.edu/overview.htm
-```{r, message=FALSE, warning=FALSE}
-zp_clr <- microbiome::transform(zp_rel_abund, "clr")  #centered log ratio, log(x1/mean(x))
-
-#PCA via phyloseq
-ord_clr <- phyloseq::ordinate(zp_clr, "RDA")
-#Plot scree plot
-phyloseq::plot_scree(ord_clr) + 
-  geom_bar(stat="identity", fill = "blue") +
-  labs(x = "\nAxis", y = "Proportion of Variance\n")
-#head(ord_clr$CA$eig)  
-
-```
-
-```{r}
-#Scale axes and plot ordination
-clr1 <- ord_clr$CA$eig[1] / sum(ord_clr$CA$eig)
-clr2 <- ord_clr$CA$eig[2] / sum(ord_clr$CA$eig)
-phyloseq::plot_ordination(zprime, ord_clr, type="samples", color="state") + 
-  geom_point(size = 2) +
-  coord_fixed(clr2 / clr1) +
-  stat_ellipse(aes(group = state), linetype = 2)
-#We see some clustering by RSV status
-```
-
-#### PERMANOVA
-Can test to see if there is any significant difference in the clustering observed
-in PCA. 
-
-```{r, message=FALSE, warning=FALSE}
-# Generate distance matrix using Aitchison distance (centered log ratio transform
-# clr, Euclidean distance)
-clr_dist_matrix <- phyloseq::distance(zp_rel_abund, method = "euclidean") 
-
-#ADONIS test
-#Multivariate analysis using Aitchison distance matrix
-vegan::adonis2(clr_dist_matrix ~ phyloseq::sample_data(zp_clr)$state)
-
-#Check to see if dispersion affects
-dispr <- vegan::betadisper(clr_dist_matrix, phyloseq::sample_data(zp_clr)$state)
-dispr
-
-plot(dispr, main = "Ordination Centroids and Dispersion Labeled: Aitchison Distance", sub = "")
-
-```
-
-```{r}
-boxplot(dispr, main = "", xlab = "")
-permutest(dispr)
-
-```
 ### PCoA
 
 ```{r, message=FALSE, warning=FALSE}
 #Atchinson Distance PCoA
+clr_dist_matrix <- phyloseq::distance(zp_rel_abund, method = "euclidean") 
 eucDis <- ordinate(zp_rel_abund, method = "PCoA", distance = clr_dist_matrix )
 PCoA_Atchison_plot <- plot_ordination(zp_rel_abund, eucDis, color = "state")
 
@@ -550,21 +251,9 @@ PCoA_Bray_plot <- plot_ordination(zp_rel_abund, pcoa, color = "state")
 
 ggsave("Plots/point1/PCoA_Bray.jpeg")
 
-# zp_rare <- rarefy_even_depth(zprime, rngseed = 123, replace = FALSE)
-# ord_unifrac <- ordinate(zp_rare, method = "PCoA", distance = "wunifrac")
-# ord_unifrac_un <- ordinate(zp_rare, method = "PCoA", distance = "unifrac")
-# zprime.ord <- ordinate(zprime, "NMDS", "bray")
-# 
-# #Plot ordinations
-# a <- plot_ordination(zp_rare, ord_unifrac, color = "Status") + geom_point(size = 2)
-# b <- plot_ordination(zp_rare, ord_unifrac_un, color = "Status") + geom_point(size = 2)
-# cowplot::plot_grid(a, b, nrow = 1, ncol = 2, scale = .9, labels = c("Weighted", "Unweighted"))
-
 ```
 
 ### NMDS
-
-
 ```{r, message=FALSE, warning=FALSE}
 
 zprime.ord <- ordinate(zp_rel_abund, "NMDS", "bray")
@@ -575,6 +264,7 @@ NMDS_plot <- plot_ordination(zp_rel_abund, zprime.ord, type="samples", color="st
 
 ggsave("Plots/point1/NMDS.jpeg")
 ```
+
 ### Create one Bray-Curtis Figure
 ```{r message=FALSE, warning=FALSE, fig.width=10}
 brayCurtisFigure <- ggarrange(p, 
@@ -590,11 +280,10 @@ ggsave("Plots/point1/BrayCurtisFigure.jpeg")
 
 ## Differential Abundance Testing
 ### Wilcoxon-rank sum to determine significant difference between any specific genus
-Perform two sample t-test to determine if any genus differs significantly
-between RSV+ and RSV- groups. 
+Perform a  non-parametric Wilcoxon rank-sum test where the null hypothesis is equal medians between states. 
 
 ```{r message=FALSE, warning=FALSE, fig.width=10}
-t_test <- list()
+wilcox_test <- list()
 
 zp_pos <- subset_samples(zp_rel_abund, state == "RSV+")
 zp_neg <- subset_samples(zp_rel_abund, state =="RSV-")
@@ -610,133 +299,47 @@ zp_neg_otu<- otu_table(zp_neg)%>%
   as.data.frame()
 
 for(genus in colnames(zp_pos_otu)){
-    t_test[[genus]] <- round(wilcox.test(zp_pos_otu[[genus]], zp_neg_otu[[genus]], paired = TRUE)$p.value, 4)
+    wilcox_test[[genus]] <- round(wilcox.test(zp_pos_otu[[genus]], zp_neg_otu[[genus]])$p.value, 4)
 }
 
-t_test <- as.data.frame(t_test, row.names = "RSV_state") %>%
+wilcox_test <- as.data.frame(wilcox_test, row.names = "RSV_state") %>%
     t()
 
-t_test <- t_test %>%
+wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
    mutate(BH_FDR_state = p.adjust(RSV_state, "BH"))
 
-print(t_test)
+print(wilcox_test)
 ```
 #### Visulaizing Significantly Significant Abundance Grouped by RSV state
-Allows visualization of each individual microbe for easier visual comparison.
-Need to figure out how I can filter by p value and only display significant 
-differences in abundance. (Perhaps for loop of zp_genus where if the genus is
-in the sig taxa list it stays, otherwise it gets discarded).
+Allows visualization of each microbe that has a wilcoxon rankn sum p value <0.06.
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, fig.width=5}
 
-significant_taxa <-  t_test %>%
+significant_taxa <-  wilcox_test %>%
     as.data.frame() %>%
     filter(RSV_state < 0.06)
 
-psmelt(zp_rel_abund) %>%
+if(length(significant_taxa$RSV_state) != 0){
+ 
+print(psmelt(zp_rel_abund) %>%
   filter(genus %in% row.names(significant_taxa)) %>%
   ggplot(data = ., aes(x = state, y = Abundance)) +
   geom_boxplot(outlier.shape  = NA) +
   geom_jitter(aes(color = genus), height = 0, width = .2) +
   labs(title = "Relative Abundance based on RSV Status", x = "", y = "Relative Abundance\n") +
   facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none")
-
-ggsave("Plots/point1/t_test_sig_state.jpeg", dpi = 300)
-```
-
-### Wilcoxon rank-sum test
-This is a  non-parametric Wilcoxon rank-sum test where the null hypothesis is equal medians between states.
-```{r, message=FALSE, warning=FALSE}
-#Generate data.frame with OTUs and metadata
-zp_wilcox <- data.frame(t(data.frame(phyloseq::otu_table(zprime))))
-zp_wilcox$state <- phyloseq::sample_data(zprime)$state
+  theme(legend.position = "none"))
 
 
-#Define functions to pass to map
-wilcox_model <- function(df){
-  wilcox.test(abund ~state, data = df)
-}
-wilcox_pval <- function(df){
-  wilcox.test(abund ~state, data = df)$p.value
-}
+ggsave("Plots/point1/wilcox_test_sig_state.jpeg", dpi = 300)
 
-#Create nested data frames by OTU and loop over each using map 
-wilcox_results <- zp_wilcox %>%
-  gather(key = Genus, value = abund, -state) %>%
-  group_by(Genus) %>%
-  nest() %>%
-  mutate(wilcox_test = map(data, wilcox_model),
-         p_value = map(data, wilcox_pval))       
-
-#Show results
-#head(wilcox_results)
-#head(wilcox_results$data[[1]])
-#wilcox_results$p_value[[1]]
-
-
-#Unnesting
-wilcox_results <- wilcox_results %>%
-  dplyr::select(Genus, p_value) %>%
-  unnest()
-
-
-head(wilcox_results)
-
-#Adding taxonomic labels
-taxa_info <- data.frame(tax_table(zprime))
-taxa_info <- taxa_info %>% rownames_to_column(var = "Genus")
-#Computing FDR corrected p-values
-wilcox_results <- wilcox_results %>%
-#   full_join(taxa_info) %>%
-   arrange(p_value) %>%
-   mutate(BH_FDR = p.adjust(p_value, "BH")) %>%
-   #filter(BH_FDR < 0.05) %>%
-   dplyr::select(Genus, p_value, BH_FDR, everything())
-
-print.data.frame(wilcox_results) 
-```
-#### Visualizing Significant Taxa based on wilcoxon
-```{r message=FALSE, warning=FALSE, fig.width=5}
-
-significant_taxa <-  wilcox_results %>%
-    as.data.frame() %>%
-    filter(p_value < 0.05)
-
-if(length(significant_taxa$Genus) != 0){
-  psmelt(zprime) %>%
-  filter(genus %in% significant_taxa$Genus) %>%
-  ggplot(data = ., aes(x = state, y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "Absolute Abundance based on RSV Status", x = "", y = "Absolute Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none") +
-  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
-
-
-ggsave("Plots/point1/wilcox_sig_state.jpeg", dpi = 300, width = 5, height = 4)  
 }else{
     print("No signifiant taxa via wilcoxon test for RSV status.")
 }
-
 ```
 
 # Location
-## Visualizing Abundance Grouped by Location
-
-```{r message=FALSE, warning=FALSE}
-
-psmelt(zp_genus) %>%
-  ggplot(data = ., aes(x = location, y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "Relative Abundance Based on Location of Death", x = "", y = "Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
-
-```
 ## Testing for a difference in genus level abundance by location 
 
 ```{r, message=FALSE, warning=FALSE}
@@ -757,21 +360,10 @@ group_data <- list(zp_BID_otu, zp_Hospital_otu)
 (xdc_location <- HMP::Xdc.sevsample(group_data)) 
 ```
 ## Alpha Diversity 
-Alpha diversity quantifies diversity within individual samples and compares the
-differences across groups. These analysis aim to determine the number of species
-in a given sample (richness) and compare averages in one group (RSV+) to another 
-group (RSV-). Some methods will also compare evenness, or how the abundance of 
-each individual species in a sample compares to the abundance of other species
-(frequency). The Shannon index combines richness and frequency. 
 
 ### Shannon and Simpson Indexes
-Comparing the total number of observed genera.
-
+#### Visualization
 ```{r, message=FALSE, warning=FALSE}
-
-#(zp_rare <- rarefy_even_depth(zprime, rngseed = 123, replace = FALSE))
-# set seed to 123 to create a repeatable random sampling, not recommended to use subsampling
-
 adiv <- data.frame(
   "Observed" = estimate_richness(zprime, measures = "Observed"),
   "Shannon" = estimate_richness(zprime, measures = "Shannon"),
@@ -788,9 +380,9 @@ adiv %>%
   facet_wrap(~ metric, scales = "free") +
   theme(legend.position="none")
 
-ggsave("Plots/point1/shannonAndSimpson_location.jpeg")
+ggsave("Plots/point1/shannonAndSimpson/location.jpeg")
 ```
-
+#### Statistical Test
 ```{r, message=FALSE, warning=FALSE}
 adiv %>%
   group_by(Status) %>%
@@ -811,8 +403,9 @@ wilcox.test(Simpson ~ Status, data = adiv, conf.int = TRUE)
 
 ```
 
-## T-test for significant difference between location for any specific genus
-Perform two sample t-test to determine if any genus differs significantly
+## Differential Abundance Testing
+### Wilcoxon rank-sum for significant difference between location
+Perform wilcoxon rank sum to determine if any genus differs significantly
 between early facility deaths or community deaths.
 ```{r message=FALSE, warning=FALSE, fig.width=10}
 zp_clr_BID <- subset_samples(zp_rel_abund, location =="BID")
@@ -837,131 +430,41 @@ for(genus in colnames(zp_clr_BID_otu)){
 p_vals <- as.data.frame(p_vals, row.names = "location") %>%
     t()
 
-t_test <- cbind(t_test, p_vals)
+wilcox_test <- cbind(wilcox_test, p_vals)
 
-t_test <- t_test %>%
+wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
    mutate(BH_FDR_location = p.adjust(location, "BH"))
 
 
-print(t_test)
+print(wilcox_test)
 ```
 
-### Plot signigficant taxa by location
+#### Visualize signigficant taxa by location
 ```{r message=FALSE, warning=FALSE}
-significant_taxa <-  t_test %>%
+significant_taxa <-  wilcox_test %>%
     as.data.frame() %>%
     filter(location < 0.05)
 
-psmelt(zp_rel_abund) %>%
-  filter(genus %in% row.names(significant_taxa)) %>%
-  ggplot(data = ., aes(x = location, y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "Relative Abundance Based on Location of Death", x = "", y = "Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
-
-ggsave("Plots/point1/t_test_sig_location.jpeg")
-```
-## Wilcoxon rank-sum
-```{r, message=FALSE, warning=FALSE}
-zp_wilcox <- data.frame(t(data.frame(phyloseq::otu_table(zp_rel_abund))))
-zp_wilcox$location <- phyloseq::sample_data(zp_rel_abund)$location
-
-#Define functions to pass to map
-wilcox_model <- function(df){
-  wilcox.test(abund ~location, data = df)
-}
-wilcox_pval <- function(df){
-  wilcox.test(abund ~location, data = df)$p.value
-}
-
-#Create nested data frames by OTU and loop over each using map 
-wilcox_results <- zp_wilcox %>%
-  gather(key = Genus, value = abund, -location) %>%
-  group_by(Genus) %>%
-  nest() %>%
-  mutate(wilcox_test = map(data, wilcox_model),
-         p_value = map(data, wilcox_pval))       
-
-#Show results
-#head(wilcox_results)
-#head(wilcox_results$data[[1]])
-#wilcox_results$p_value[[1]]
-
-
-#Unnesting
-wilcox_results <- wilcox_results %>%
-  dplyr::select(Genus, p_value) %>%
-  unnest()
-
-
-head(wilcox_results)
-
-#Adding taxonomic labels
-taxa_info <- data.frame(tax_table(zp_rel_abund))
-taxa_info <- taxa_info %>% rownames_to_column(var = "Genus")
-#Computing FDR corrected p-values
-wilcox_results <- wilcox_results %>%
-#   full_join(taxa_info) %>%
-   arrange(p_value) %>%
-   mutate(BH_FDR = p.adjust(p_value, "BH")) %>%
-   #filter(BH_FDR < 0.05) %>%
-   dplyr::select(Genus, p_value, BH_FDR, everything())
-
-print.data.frame(wilcox_results) 
-
-```
-
-#### Visualizing Significant Taxa based on wilcoxon
-```{r message=FALSE, warning=FALSE}
-
-significant_taxa <-  wilcox_results %>%
-    as.data.frame() %>%
-    filter(p_value < 0.05)
-
-if(length(significant_taxa$Genus) != 0){
-  locationFig <- psmelt(zp_rel_abund) %>%
-  filter(genus %in% significant_taxa$Genus) %>%
-  ggplot(data = ., aes(x = location, y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "Relative Abundance based on Location", x = "", y = "Relative Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none")
-  locationFig
-  ggsave("Plots/point1/wilcox_sig_location.jpeg", dpi = 300)  
-}else{
-    locationFig <- psmelt(zprime) %>%
-    ggplot(data = ., aes(x = location, y = Abundance)) +
-    geom_boxplot(outlier.shape  = NA) +
-    geom_jitter(aes(color = genus), height = 0, width = .2) +
-    labs(title = "NO SIGNIFICANCE VIA LOCATION", x = "", y = "Relative Abundance\n") +
-    facet_wrap(~ OTU, scales = "free") +
-    theme(legend.position = "none")
+if(length(significant_taxa$location) != 0){
+    locationFig <- psmelt(zp_rel_abund) %>%
+              filter(genus %in% row.names(significant_taxa)) %>%
+              ggplot(data = ., aes(x = location, y = Abundance)) +
+              geom_boxplot(outlier.shape  = NA) +
+              geom_jitter(aes(color = genus), height = 0, width = .2) +
+              labs(title = "Relative Abundance Based on Location of Death", x = "", y = "Abundance\n") +
+              facet_wrap(~ OTU, scales = "free") +
+              theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
     
     locationFig
-    
-    ggsave("Plots/point1/wilcox_sig_location.jpeg", dpi = 300)
-    
+    ggsave("Plots/point1/wilcox_test_sig_location.jpeg")
+}else{
     print("No signifiant taxa via wilcoxon test for Location.")
 }
 
 ```
 
-# HIV Status
-## Visualizing Abundance by HIV status
-```{r message=FALSE, warning=FALSE}
-psmelt(zp_genus) %>%
-  ggplot(data = ., aes(x = as.factor(mother_hiv), y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "Relative Abundance Based on Mother's HIV Status", x = "", y = "Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
-
-```
+# HIV Exposure
 ## Testing for a difference in genus level abundance by HIV Exposure Status
 
 ```{r, message=FALSE, warning=FALSE}
@@ -982,8 +485,52 @@ group_data <- list(zp_HIV_neg_otu, zp_HIV_pos_otu)
 (xdc_location <- HMP::Xdc.sevsample(group_data)) 
 ```
 
-## T-test for significant difference between HIV status for any specific genus
-Perform two sample t-test to determine if any genus differs significantly
+## Alpha Diversity 
+### Shannon and Simpson Indexes
+#### Visualization
+```{r, message=FALSE, warning=FALSE}
+adiv <- data.frame(
+  "Observed" = estimate_richness(zprime, measures = "Observed"),
+  "Shannon" = estimate_richness(zprime, measures = "Shannon"),
+  "Simpson" = estimate_richness(zprime, measures = "Simpson"),
+  "Status" = sample_data(zprime)$mother_hiv)
+
+adiv %>%
+  gather(key = metric, value = value, c("Observed", "Shannon", "Simpson")) %>%
+  mutate(metric = factor(metric, levels = c("Observed", "Shannon", "Simpson"))) %>%
+  ggplot(aes(x = Status, y = value)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(aes(color = Status), height = 0, width = .2) +
+  labs(x = "", y = "") +
+  facet_wrap(~ metric, scales = "free") +
+  theme(legend.position="none")
+
+ggsave("Plots/point1/shannonAndSimpson/mother_hiv.jpeg")
+```
+#### Statistical Test
+```{r, message=FALSE, warning=FALSE}
+adiv %>%
+  group_by(Status) %>%
+  summarise(median_observed = median(Observed),
+            median_shannon = median(Shannon),
+            median_simpson = median(Simpson))
+
+# Test for normality
+shapiro.test(subset(adiv, Status == "Unexposed")$Shannon)
+shapiro.test(subset(adiv, Status == "Exposed")$Shannon)
+shapiro.test(subset(adiv, Status == "Unexposed")$Simpson)
+shapiro.test(subset(adiv, Status == "Exposed")$Simpson)
+
+# pos samples are not normally distributed, neg samples are, so use 
+wilcox.test(Observed ~ Status, data = adiv, exact = FALSE, conf.int = TRUE)
+wilcox.test(Shannon ~ Status, data = adiv, conf.int = TRUE) 
+wilcox.test(Simpson ~ Status, data = adiv, conf.int = TRUE) 
+
+```
+
+## Differential Abundance Testing
+### Wilcoxon rank sum test for significant difference between HIV status
+Perform wilcoxon rank sum to determine if any genus differs significantly
 between mother's HIV status.
 ```{r message=FALSE, warning=FALSE, fig.width=10}
 zp_HIV_neg <- subset_samples(zp_rel_abund, mother_hiv == "Unexposed")
@@ -1007,23 +554,23 @@ for(genus in colnames(zp_HIV_neg_otu)){
 
 p_vals <- as.data.frame(p_vals, row.names = "HIV_status") %>%
     t()
-t_test <- cbind(t_test, p_vals)
+wilcox_test <- cbind(wilcox_test, p_vals)
 
-t_test <- t_test %>%
+wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
    mutate(BH_FDR_HIV = p.adjust(HIV_status, "BH"))
 
-print(t_test)
+print(wilcox_test)
 ```
 
-### Plot signigficant taxa by HIV exposure
+#### Plot signigficant taxa by HIV exposure
 ```{r message=FALSE, warning=FALSE}
-significant_taxa <-  t_test %>%
+significant_taxa <-  wilcox_test %>%
     as.data.frame() %>%
     filter(HIV_status < 0.05)
 
 if(length(row.names(significant_taxa)) != 0){
-    psmelt(zp_rel_abund) %>%
+    print(psmelt(zp_rel_abund) %>%
         filter(genus %in% row.names(significant_taxa)) %>%
         ggplot(data = ., aes(x = as.factor(mother_hiv), y = Abundance)) +
         geom_boxplot(outlier.shape  = NA) +
@@ -1031,258 +578,16 @@ if(length(row.names(significant_taxa)) != 0){
         labs(title = "Relative Abundance Based on Mother's HIV Status", 
              x = "", y = "Abundance\n") +
         facet_wrap(~ OTU, scales = "free") +
-        theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
+        theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18)))
     
-    ggsave("Plots/point1/t_test_sig_mother_hiv.jpeg")
+    ggsave("Plots/point1/wilcox_test_sig_mother_hiv.jpeg")
 }else{
     print("No significant taxa based on HIV exposure")
 }
 ```
-## Differential Abundance - HIV status
-```{r, message=FALSE, warning=FALSE}
-zp_wilcox <- data.frame(t(data.frame(phyloseq::otu_table(zp_rel_abund))))
-zp_wilcox$mother_hiv <- phyloseq::sample_data(zp_rel_abund)$mother_hiv
-
-#Define functions to pass to map
-wilcox_model <- function(df){
-  wilcox.test(abund ~mother_hiv, data = df)
-}
-wilcox_pval <- function(df){
-  wilcox.test(abund ~mother_hiv, data = df)$p.value
-}
-
-#Create nested data frames by OTU and loop over each using map 
-wilcox_results <- zp_wilcox %>%
-  gather(key = Genus, value = abund, -mother_hiv) %>%
-  group_by(Genus) %>%
-  nest() %>%
-  mutate(wilcox_test = map(data, wilcox_model),
-         p_value = map(data, wilcox_pval))       
-
-#Show results
-#head(wilcox_results)
-#head(wilcox_results$data[[1]])
-#wilcox_results$p_value[[1]]
-
-
-#Unnesting
-wilcox_results <- wilcox_results %>%
-  dplyr::select(Genus, p_value) %>%
-  unnest()
-
-
-head(wilcox_results)
-
-#Adding taxonomic labels
-taxa_info <- data.frame(tax_table(zp_rel_abund))
-taxa_info <- taxa_info %>% rownames_to_column(var = "Genus")
-#Computing FDR corrected p-values
-wilcox_results <- wilcox_results %>%
-#   full_join(taxa_info) %>%
-   arrange(p_value) %>%
-   mutate(BH_FDR = p.adjust(p_value, "BH")) %>%
-   filter(BH_FDR < 0.05) %>%
-   dplyr::select(Genus, p_value, BH_FDR, everything())
-
-print.data.frame(wilcox_results) 
-
-```
-
-#### Visualizing Significant Taxa based on wilcoxon
-```{r message=FALSE, warning=FALSE}
-
-significant_taxa <-  wilcox_results %>%
-    as.data.frame() %>%
-    filter(p_value < 0.05)
-
-if(length(significant_taxa$Genus) != 0){
-  HIV_statusFig <- psmelt(zp_rel_abund) %>%
-  filter(genus %in% significant_taxa$Genus) %>%
-  ggplot(data = ., aes(x = mother_hiv, y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "Relative Abundance based on HIV Exposure", 
-       x = "", y = "Relative Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none")
-
-  HIV_statusFig
-  
-  ggsave("Plots/point1/wilcox_sig_HIV_Exposure.jpeg", dpi = 300)  
-}else{
-    HIV_statusFig <- psmelt(zp_rel_abund) %>%
-  ggplot(data = ., aes(x = mother_hiv, y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "NO SIGNIFICANCE HIV Exposure", 
-       x = "", y = "Relative Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none")
-
-  HIV_statusFig
-  
-  ggsave("Plots/point1/wilcox_sig_HIV_Exposure.jpeg", dpi = 300)
-  
-    print("No signifiant taxa via wilcoxon test for HIV Exposure.")
-}
-
-```
-
-# Length of Hospital Stay
-## Abundance based on Length of Hospital Stay
-```{r message=FALSE, warning=FALSE}
-
-psmelt(zp_rel_abund) %>%
-  ggplot(data = ., aes(x = as.factor(hosp_duration), y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "Relative Abundance Based on Length of Hospital Stay", x = "", y = "Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=22))
-
-```
-## Testing for a difference in genus level abundance by Length of Hosp Stay
-
-```{r, message=FALSE, warning=FALSE}
-zp_zero <- subset_samples(zp_genus_counts, hosp_duration == 0)
-zp_one <- subset_samples(zp_genus_counts, hosp_duration == 1)
-zp_two <- subset_samples(zp_genus_counts, hosp_duration == 2)
-zp_NA <- subset_samples(zp_genus_counts, hosp_duration == "N/A")
-
-zp_zero_otu <- otu_table(zp_zero) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame() 
-
-zp_one_otu <- otu_table(zp_one) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame() 
-
-zp_two_otu <- otu_table(zp_two) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame() 
-
-zp_NA_otu <- otu_table(zp_NA) %>%
-   data.frame() %>%
-   t() %>%
-   as.data.frame() 
-
-group_data <- list(zp_zero_otu, zp_one_otu, zp_two_otu, zp_NA_otu)
-(xdc_hosp_duration <- HMP::Xdc.sevsample(group_data)) 
-```
-## Kruskal-Wallis for significant difference between Length of Hosp Stay for any specific genus
-Perform two sample t-test to determine if any genus differs significantly
-between early length of Hospital Stay.
-
-```{r message=FALSE, warning=FALSE, fig.width=10}
-zp_zero <- subset_samples(zp_rel_abund, hosp_duration == 0)
-zp_one <- subset_samples(zp_rel_abund, hosp_duration == 1)
-zp_two <- subset_samples(zp_rel_abund, hosp_duration == 2)
-zp_NA <- subset_samples(zp_rel_abund, hosp_duration == "N/A")
-
-zp_zero_otu <- otu_table(zp_zero) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame() 
-
-zp_one_otu <- otu_table(zp_one) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame() 
-
-zp_two_otu <- otu_table(zp_two) %>%
-  data.frame() %>%
-  t() %>%
-  as.data.frame() 
-
-zp_NA_otu <- otu_table(zp_NA) %>%
-   data.frame() %>%
-   t() %>%
-   as.data.frame() 
-
-microbes <- colnames(zp_zero_otu)
-len <- "0"
-zp_zero_otu <- cbind(zp_zero_otu, len)
-len <- "1"
-zp_one_otu <- cbind(zp_one_otu, len)
-len <- "2"
-zp_two_otu <- cbind(zp_two_otu, len)
-len <- "NA"
-#zp_NA_otu <- cbind(zp_NA_otu, len)
-
-all_data <- rbind(zp_zero_otu, zp_one_otu, zp_two_otu)#, zp_NA_otu)
-
-p_vals <- list()
-
-for(genus in microbes){
-    p_vals[[genus]] <- round(kruskal.test(all_data[[genus]] ~ all_data$len)$p.value, 4)
-}
-
-p_vals <- as.data.frame(p_vals, row.names = "len_hosp_stay") %>%
-    t() %>%
-    as.data.frame() 
-
-t_test <- cbind(t_test, p_vals)
-
-t_test <- t_test %>%
-   as.data.frame() %>%
-   mutate(BH_FDR_len_hosp_stay = p.adjust(len_hosp_stay, "BH"))
-
-print(t_test)
-```
-
-### Plot signigficant taxa by length of hospital stay
-```{r message=FALSE, warning=FALSE}
-significant_taxa <-  t_test %>%
-    as.data.frame() %>%
-    filter(len_hosp_stay < 0.05)
-
-if(length(row.names(significant_taxa)) != 0){
-    psmelt(zp_rel_abund) %>%
-  filter(genus %in% row.names(significant_taxa)) %>%
-  ggplot(data = ., aes(x = as.factor(hosp_duration), y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "Relative Abundance Based on Length of Hospital Stay", x = "", y = "Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
-
-ggsave("Plots/point1/kruskal_sig_hospital_duration.jpeg")
-}else{
-    psmelt(zp_rel_abund) %>%
-    ggplot(data = ., aes(x = as.factor(hosp_duration), y = Abundance)) +
-    geom_boxplot(outlier.shape  = NA) +
-    geom_jitter(aes(color = genus), height = 0, width = .2) +
-    labs(title = "NO SIGNIFICANCE VIA Length of Hospital Stay", x = "", y = "Abundance\n") +
-    facet_wrap(~ OTU, scales = "free") +
-    theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
-
-    ggsave("Plots/point1/kruskal_sig_hospital_duration.jpeg")
-    
-    print("No significant difference based on length of hospital stay.")
-}
-
-
-```
 
 # Sex
-## Abundance based on Sex
-```{r message=FALSE, warning=FALSE}
-
-psmelt(zp_rel_abund) %>%
-  #filter(gender != 8) %>%
-  ggplot(data = ., aes(x = as.factor(sex), y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "Relative Abundance based on Sex", x = "Sex", y = "Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=22))
-
-```
 ## Testing for a difference in genus level abundance by Sex
-
 ```{r, message=FALSE, warning=FALSE}
 zp_female <- subset_samples(zp_genus_counts, sex == "Female")
 zp_male <- subset_samples(zp_genus_counts, sex == "Male")
@@ -1306,7 +611,55 @@ zp_unknown_otu <- otu_table(zp_unknown) %>%
 group_data <- list(zp_female_otu, zp_male_otu, zp_unknown_otu)
 (xdc_location <- HMP::Xdc.sevsample(group_data)) 
 ```
-## Wilcox for significant difference between Sex for any specific genus
+
+## Alpha Diversity 
+### Shannon and Simpson Indexes
+#### Visualization
+```{r, message=FALSE, warning=FALSE}
+adiv <- data.frame(
+  "Observed" = estimate_richness(zprime, measures = "Observed"),
+  "Shannon" = estimate_richness(zprime, measures = "Shannon"),
+  "Simpson" = estimate_richness(zprime, measures = "Simpson"),
+  "Status" = sample_data(zprime)$sex)
+
+adiv %>%
+  gather(key = metric, value = value, c("Observed", "Shannon", "Simpson")) %>%
+  mutate(metric = factor(metric, levels = c("Observed", "Shannon", "Simpson"))) %>%
+  ggplot(aes(x = Status, y = value)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(aes(color = Status), height = 0, width = .2) +
+  labs(x = "", y = "") +
+  facet_wrap(~ metric, scales = "free") +
+  theme(legend.position="none")
+
+ggsave("Plots/point1/shannonAndSimpson/mother_hiv.jpeg")
+```
+#### Statistical Test
+```{r, message=FALSE, warning=FALSE}
+adiv %>%
+  filter(Status != "Unknown")  %>%
+  group_by(Status) %>%
+  summarise(median_observed = median(Observed),
+            median_shannon = median(Shannon),
+            median_simpson = median(Simpson))
+
+adiv <- filter(adiv, Status != "Unknown")
+
+# Test for normality
+shapiro.test(subset(adiv, Status == "Male")$Shannon)
+shapiro.test(subset(adiv, Status == "Female")$Shannon)
+shapiro.test(subset(adiv, Status == "Male")$Simpson)
+shapiro.test(subset(adiv, Status == "Female")$Simpson)
+
+# pos samples are not normally distributed, neg samples are, so use 
+wilcox.test(Observed ~ Status, data = adiv, exact = FALSE, conf.int = TRUE)
+wilcox.test(Shannon ~ Status, data = adiv, conf.int = TRUE) 
+wilcox.test(Simpson ~ Status, data = adiv, conf.int = TRUE) 
+
+```
+
+## Differential Abundance Testing
+### Wilcox for significant difference between Sex for any specific genus
 Perform two sample t-test to determine if any genus differs significantly
 between early facility deaths or community deaths.
 
@@ -1335,34 +688,31 @@ sex <- "Female"
 zp_female_otu <- cbind(zp_female_otu, sex)
 sex <- "Male"
 zp_male_otu <- cbind(zp_male_otu, sex)
-#sex <- "Unknown"
-#zp_unknown_otu <- cbind(zp_unknown_otu, sex)
 
-all_data <- rbind(zp_female_otu, zp_male_otu)#, zp_unknown_otu)
+all_data <- rbind(zp_female_otu, zp_male_otu)
 
 p_vals <- list()
 
 for(genus in microbes){
-    #p_vals[[genus]] <- oneway.test(all_data[[genus]] ~ all_data$sex)$p.value
-        p_vals[[genus]] <- round(wilcox.test(zp_female_otu[[genus]], zp_male_otu[[genus]])$p.value, 4)
+    p_vals[[genus]] <- round(wilcox.test(zp_female_otu[[genus]], zp_male_otu[[genus]])$p.value, 4)
 }
 
 p_vals <- as.data.frame(p_vals, row.names = "sex") %>%
     t() %>%
     as.data.frame() 
 
-t_test <- cbind(t_test, p_vals)
+wilcox_test <- cbind(wilcox_test, p_vals)
 
-t_test <- t_test %>%
+wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
    mutate(BH_FDR_sex = p.adjust(sex, "BH"))
 
-print(t_test)
+print(wilcox_test)
 ```
 
 ### Plot signigficant taxa by Sex
 ```{r message=FALSE, warning=FALSE}
-significant_taxa <-  t_test %>%
+significant_taxa <-  wilcox_test %>%
     as.data.frame() %>%
     filter(sex < 0.05)
 
@@ -1381,36 +731,12 @@ if(length(row.names(significant_taxa))> 0){
   
   ggsave("Plots/point1/wilcox_sig_sex.jpeg")
 }else{
-    sexFig <- psmelt(zp_rel_abund) %>%
-  filter(sex %in% c("Female", "Male")) %>%
-  ggplot(data = ., aes(x = sex, y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "NO SIGNIFCANCE Based on Sex", x = "", y = "Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
-  
-  sexFig
-  
-  ggsave("Plots/point1/wilcox_sig_sex.jpeg")
     print("No significance based on sex.")
 }
 
 ```
 
 # Age
-## Abundance based on age
-```{r message=FALSE, warning=FALSE}
-
-psmelt(zp_rel_abund) %>%
-  ggplot(data = ., aes(x = as.factor(death_age), y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "Relative Abundance based on Age", x = "Age at Death", y = "Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=22))
-
-```
 ## Testing for a difference in genus level abundance by location 
 
 ```{r, message=FALSE, warning=FALSE}
@@ -1444,21 +770,10 @@ group_data <- list(zp_newborn_otu, zp_one_month_otu, zp_two_month_otu, zp_five_m
 ```
 
 ## Alpha Diversity 
-Alpha diversity quantifies diversity within individual samples and compares the
-differences across groups. These analysis aim to determine the number of species
-in a given sample (richness) and compare averages in one group (RSV+) to another 
-group (RSV-). Some methods will also compare evenness, or how the abundance of 
-each individual species in a sample compares to the abundance of other species
-(frequency). The Shannon index combines richness and frequency. 
-
 ### Shannon and Simpson Indexes
 Comparing the total number of observed genera.
 
 ```{r, message=FALSE, warning=FALSE}
-
-#(zp_rare <- rarefy_even_depth(zprime, rngseed = 123, replace = FALSE))
-# set seed to 123 to create a repeatable random sampling, not recommended to use subsampling
-
 adiv <- data.frame(
   "Observed" = estimate_richness(zp_genus_counts, measures = "Observed"),
   "Shannon" = estimate_richness(zp_genus_counts, measures = "Shannon"),
@@ -1477,7 +792,8 @@ adiv %>%
 
 ggsave("Plots/point1/shannonAndSimpson_age.jpeg")
 ```
- I think we need to do an anova to make this work...
+
+#### Statistical Test
 ```{r, message=FALSE, warning=FALSE}
 adiv %>%
   group_by(Status) %>%
@@ -1501,8 +817,8 @@ kruskal.test(Shannon ~ Status, data = adiv)
 kruskal.test(Simpson ~ Status, data = adiv) 
 
 ```
-
-## Kruskal-Wallis for significant difference between Age for any specific genus
+## Differential Abundance Testing
+### Kruskal-Wallis for significant difference between Age for any specific genus
 Perform non parametric Kruskal-Wallis to determine if any genus differs significantly
 between age of death.
 
@@ -1555,18 +871,18 @@ p_vals <- as.data.frame(p_vals, row.names = "age") %>%
     t() %>%
     as.data.frame() 
 
-t_test <- cbind(t_test, p_vals)
+wilcox_test <- cbind(wilcox_test, p_vals)
 
-t_test <- t_test %>%
+wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
    mutate(BH_FDR_age = p.adjust(age, "BH"))
 
-print(t_test)
+print(wilcox_test)
 ```
 
-### Plot signigficant taxa by age
+#### Plot signigficant taxa by age
 ```{r message=FALSE, warning=FALSE}
-significant_taxa <-  t_test %>%
+significant_taxa <-  wilcox_test %>%
     as.data.frame() %>%
     filter(age < 0.05)
 
@@ -1584,17 +900,6 @@ if(length(row.names(significant_taxa)) != 0){
   
   ggsave("Plots/point1/kruskal_Age.jpeg")
 }else{
-    ageFig <-  psmelt(zp_rel_abund) %>%
-  ggplot(data = ., aes(x = as.factor(death_age), y = Abundance)) +
-  geom_boxplot(outlier.shape  = NA) +
-  geom_jitter(aes(color = genus), height = 0, width = .2) +
-  labs(title = "NO SIGNIFICANCE Based on Age", x = "", y = "Abundance\n") +
-  facet_wrap(~ OTU, scales = "free") +
-  theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18))
-
-  ageFig
-  
-  ggsave("Plots/point1/kruskal_Age.jpeg")
     print("No significant difference based on length of hospital stay.")
 }
 
@@ -1602,23 +907,22 @@ if(length(row.names(significant_taxa)) != 0){
 
 #Clean p-value chart
 ```{r, message=FALSE, warning=FALSE}
-t_test <- dplyr::select(t_test, -len_hosp_stay, -BH_FDR_len_hosp_stay) 
+#wilcox_test <- dplyr::select(wilcox_test, -len_hosp_stay, -BH_FDR_len_hosp_stay) 
 
-for(col in 1:ncol(t_test)){
-    for(item in 1:length(t_test[,col])){
-        if (t_test[item, col] < 0.01){
-            t_test[item, col] <- paste0(t_test[item, col], "***")
-        }else if (t_test[item, col] < 0.0260){
-            t_test[item, col] <- paste0(t_test[item, col], "**")
-        }else if (t_test[item, col] < 0.05){
-            t_test[item, col] <- paste0(t_test[item, col], "*")
+for(col in 1:ncol(wilcox_test)){
+    for(item in 1:length(wilcox_test[,col])){
+        if (wilcox_test[item, col] < 0.01){
+            wilcox_test[item, col] <- paste0(wilcox_test[item, col], "***")
+        }else if (wilcox_test[item, col] < 0.0260){
+            wilcox_test[item, col] <- paste0(wilcox_test[item, col], "**")
+        }else if (wilcox_test[item, col] < 0.05){
+            wilcox_test[item, col] <- paste0(wilcox_test[item, col], "*")
         }
     }
 }
-
-
 ```
-### Create Other Variable Chart
+
+# Create Other Variable Chart
 ```{r message=FALSE, warning=FALSE, fig.width=10}
 otherVariablesFigure <- ggarrange(locationFig, sexFig, ageFig, 
                     labels = c("A", "B", "C"), nrow = 2, ncol = 2)+
@@ -1628,66 +932,3 @@ otherVariablesFigure
 ggsave("Plots/point1/otherVariablesFigure.jpeg")
 ```
 
-# Linear Regression
-I need to figure out the best way to store this information for each taxa and add it into the loop. Currently it's not very useful because there's no way to interpret it. Which also means I need to learn what it is I am doing and how best to interpret it all.
-```{r, message=FALSE, warning=FALSE}
-linearRegressResults <- c()
-count = 1
-for (taxa in rownames(otu_table(zprime)))
-{
-    if(count == 1){
-        taxaCounts <- as.data.frame(t(as.data.frame(otu_table(zp_clr)[taxa])))
-        taxaInfo <- merge(meta, taxaCounts, by=0)
-        # taxaInfo <- dplyr::select(taxaInfo, -hosp_duration)
-        
-        # for (row in 1:nrow(taxaInfo)){
-        #     if(taxaInfo[row, "state"] == "RSV+"){
-        #         taxaInfo[row, "state"] <- 1
-        #     }else if(taxaInfo[row, "state"] == "RSV-"){
-        #         taxaInfo[row, "state"] <- 0
-        #     }
-        # 
-        #      if(taxaInfo[row, "mother_hiv"] == "Exposed"){
-        #         taxaInfo[row, "mother_hiv"] <- 0
-        #     }else if(taxaInfo[row, "mother_hiv"] == "Unexposed"){
-        #         taxaInfo[row, "mother_hiv"] <- 1
-        #     }
-        # 
-        #     if(taxaInfo[row, "location"] == "BID"){
-        #         taxaInfo[row, "location"] <- 0
-        #     }else if(taxaInfo[row, "location"] == "Hospital"){
-        #         taxaInfo[row, "location"] <- 1
-        #     }
-        # 
-        #     # if(taxaInfo[row, "sex"] == "Female"){
-        #     #     taxaInfo[row, "Female"] <- 0
-        #     # }else if(taxaInfo[row, "sex"] == "Male"){
-        #     #     taxaInfo[row, "Male"] <- 1
-        #     # }else if(taxaInfo[row, "sex"] == "Unknown"){
-        #     #     taxaInfo[row, "Unknown"] <- 2
-        #     # }
-        # }
-        
-        fit0 <- lm(paste0(taxa, " ~ 1"), taxaInfo) #intercept
-        fit1 <- lm(paste0(taxa," ~ state"), taxaInfo)
-        fit2 <- lm(paste0(taxa, " ~ state + mother_hiv"), taxaInfo)
-        fit3 <- lm(paste0(taxa, " ~ state + mother_hiv + location"), taxaInfo)
-        fit4 <- lm(paste0(taxa, " ~ state + mother_hiv + location + sex"), taxaInfo)
-        
-        sum0 <- summary(fit0)$coefficients[,4] 
-        sum1 <- summary(fit1)$coefficients[,4] 
-        sum2 <- summary(fit2)$coefficients[,4] 
-        sum3 <- summary(fit3)$coefficients[,4] 
-        sum4 <- summary(fit4)$coefficients[,4] 
-        
-        anova1 <- anova(fit0, fit1, test='F')$p.value
-        anova2 <- anova(fit1, fit2, test='F')
-        anova3 <- anova(fit2, fit3, test='F')
-        anova4 <- anova(fit3, fit4, test='F')
-        
-        linearRegressResults[[taxa]] <- c(sum0, sum1, sum2, sum3, sum4, anova1, anova2, anova3, anova4)
-        count = count+1
-        #save info to a dataframe, each row represents taxa and each column is needed info
-    }
-}
-```

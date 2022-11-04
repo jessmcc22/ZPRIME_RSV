@@ -337,7 +337,7 @@ plot_bar(zp_rel_abund, fill = "genus") +
         axis.ticks.x=element_blank(),
         legend.key.size = unit(0.2, "cm"))+
   scale_fill_paletteer_d(chosen_pal)+
-    scale_color_paletteer_d(chosen_pal)
+  scale_color_paletteer_d(chosen_pal)
 #ggsave(paste0("Plots/1pct/paletteoptions/", color, ".jpeg"))
 
 #colorCombos[color] <-  chosen_pal

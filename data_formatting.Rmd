@@ -12,12 +12,12 @@ suppressPackageStartupMessages({
   library(tidyverse)
   library(knitr)
   library(magrittr)
-    
   # Data formats
   library(animalcules)
   library(MultiAssayExperiment)
   library(SummarizedExperiment)
-    
+  # Add assays
+  library(TBSignatureProfiler)
 })
 ```
 
@@ -60,7 +60,7 @@ all_relabu_genus <- counts_table |>
   summarise(across(.fns = sum)) %>%
   # Sum everything but the first columm ("phylum")
   mutate(allmeans = apply(.[,-1], 1, mean)) |>
-  select(genus, allmeans) |>
+  dplyr::select(genus, allmeans) |>
   mutate(genus = replace(genus, is.na(genus), "Unknown")) |>
   arrange(desc(allmeans)) |>
   mutate(lessthan1pct = allmeans < 0.001)
@@ -68,7 +68,7 @@ all_relabu_genus <- counts_table |>
 # Identify species in other
 othergenera <- all_relabu_genus %>%
   filter(lessthan1pct == TRUE) |>
-  select(genus) |> unlist() |> unname()
+  dplyr::select(genus) |> unlist() |> unname()
 
 ```
 

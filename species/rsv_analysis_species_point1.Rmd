@@ -326,7 +326,7 @@ wilcox_test <- wilcox_test %>%
 print(wilcox_test)
 ```
 #### Visulaizing Significantly Significant Abundance Grouped by RSV state
-Allows visualization of each microbe that has a wilcoxon rank sum p value <0.06.
+Allows visualization of each microbe that has a wilcoxon rank sum p value <0.05.
 
 ```{r message=FALSE, warning=FALSE, fig.width=5}
 

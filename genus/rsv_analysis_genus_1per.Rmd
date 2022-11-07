@@ -319,18 +319,18 @@ wilcox_test <- as.data.frame(wilcox_test, row.names = "RSV_state") %>%
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_state = p.adjust(RSV_state, "BH"))
+   mutate(BH_FDR_state = round(p.adjust(RSV_state, "BH"), 4))
 
 print(wilcox_test)
 ```
 #### Visulaizing Significantly Significant Abundance Grouped by RSV state
-Allows visualization of each microbe that has a wilcoxon rankn sum p value <0.06.
+Allows visualization of each microbe that has a wilcoxon rankn sum p value <0.05.
 
 ```{r message=FALSE, warning=FALSE, fig.width=5}
 
 significant_taxa <-  wilcox_test %>%
     as.data.frame() %>%
-    filter(RSV_state < 0.06)
+    filter(RSV_state < 0.05)
 
 if(length(significant_taxa$RSV_state) != 0){
  
@@ -448,7 +448,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_location = p.adjust(location, "BH"))
+   mutate(BH_FDR_location = round(p.adjust(location, "BH"), 4))
 
 
 print(wilcox_test)
@@ -574,7 +574,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_HIV = p.adjust(HIV_status, "BH"))
+   mutate(BH_FDR_HIV = round(p.adjust(HIV_status, "BH"), 4))
 
 print(wilcox_test)
 ```
@@ -723,7 +723,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_sex = p.adjust(sex, "BH"))
+   mutate(BH_FDR_sex = round(p.adjust(sex, "BH"), 4))
 
 print(wilcox_test)
 ```
@@ -895,7 +895,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_age = p.adjust(age, "BH"))
+   mutate(BH_FDR_age = round(p.adjust(age, "BH"), 4))
 
 print(wilcox_test)
 ```

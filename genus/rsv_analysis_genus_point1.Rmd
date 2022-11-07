@@ -323,7 +323,7 @@ wilcox_test <- as.data.frame(wilcox_test, row.names = "RSV_state") %>%
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_state = p.adjust(RSV_state, "BH"))
+   mutate(BH_FDR_state = round(p.adjust(RSV_state, "BH"), 4))
 
 print(wilcox_test)
 ```
@@ -334,7 +334,7 @@ Allows visualization of each microbe that has a wilcoxon rankn sum p value <0.06
 
 significant_taxa <-  wilcox_test %>%
     as.data.frame() %>%
-    filter(RSV_state < 0.06)
+    filter(RSV_state < 0.05)
 
 if(length(significant_taxa$RSV_state) != 0){
  
@@ -452,7 +452,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_location = p.adjust(location, "BH"))
+   mutate(BH_FDR_location = round(p.adjust(location, "BH"), 4))
 
 
 print(wilcox_test)
@@ -578,7 +578,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_HIV = p.adjust(HIV_status, "BH"))
+   mutate(BH_FDR_HIV = round(p.adjust(HIV_status, "BH"), 4))
 
 print(wilcox_test)
 ```
@@ -727,7 +727,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_sex = p.adjust(sex, "BH"))
+   mutate(BH_FDR_sex = round(p.adjust(sex, "BH"), 4))
 
 print(wilcox_test)
 ```
@@ -899,7 +899,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_age = p.adjust(age, "BH"))
+   mutate(BH_FDR_age = round(p.adjust(age, "BH"), 4))
 
 print(wilcox_test)
 ```
@@ -932,7 +932,6 @@ if(length(row.names(significant_taxa)) != 0){
 
 #Clean p-value chart
 ```{r, message=FALSE, warning=FALSE}
-#wilcox_test <- dplyr::select(wilcox_test, -len_hosp_stay, -BH_FDR_len_hosp_stay) 
 
 for(col in 1:ncol(wilcox_test)){
     for(item in 1:length(wilcox_test[,col])){
@@ -945,6 +944,8 @@ for(col in 1:ncol(wilcox_test)){
         }
     }
 }
+
+write.csv(wilcox_test, "pvalues.csv")
 ```
 
 # Create Other Variable Chart

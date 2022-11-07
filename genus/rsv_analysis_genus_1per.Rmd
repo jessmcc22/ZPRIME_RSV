@@ -123,6 +123,24 @@ plot_bar(zp_rel_abund, fill = "genus") +
 
 ggsave("Plots/point1/relativeAbundance.jpeg")
 ```
+## Top Five Most Abundant Genera 
+
+```{r messafe=FALSE, warning=FALSE}
+
+rankedAbundancePos <- psmelt(zp_rel_abund) %>%
+    group_by(state, OTU) %>%
+    summarise(rel_abund = mean(Abundance)) %>%
+    filter(state == "RSV+") %>%
+    arrange(desc(rel_abund))%>%
+    top_n(6)
+
+rankedAbundanceNeg <- psmelt(zp_rel_abund) %>%
+    group_by(state, OTU) %>%
+    summarise(rel_abund = mean(Abundance)) %>%
+    filter(state == "RSV-") %>%
+    arrange(desc(rel_abund))%>%
+    top_n(6)
+```
 
 ## Testing for a difference in genus level abundance 
 Analogous to a two-sample t-test, but instead we are testing whether taxa 

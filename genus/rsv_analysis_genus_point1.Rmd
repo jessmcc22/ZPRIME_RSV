@@ -90,6 +90,10 @@ chi_stats$hiv <-chisq.test(samples_df$state, samples_df$mother_hiv)$p.value
 chi_stats$death_age <- chisq.test(samples_df$state, samples_df$death_age)$p.value
 chi_stats$location <- chisq.test(samples_df$state, samples_df$location)$p.value
 chi_stats$hospitalized <- chisq.test(samples_df$state, samples_df$hosp_duration)$p.value
+
+resp_disease <- read_csv("data/Respiratory_disease_status.csv")
+chi_stats$resp_disease <- chisq.test(resp_disease$State, resp_disease$Disease_indication)$p.value
+
 print(chi_stats)
 ```
 # Create color palette that represents 15 organisms well
@@ -122,6 +126,24 @@ plot_bar(zp_rel_abund, fill = "genus") +
   scale_fill_hue(l=45)
 
 ggsave("Plots/point1/relativeAbundance.jpeg")
+```
+## Top Five Most Abundant Genera 
+
+```{r messafe=FALSE, warning=FALSE}
+
+rankedAbundancePos <- psmelt(zp_rel_abund) %>%
+    group_by(state, OTU) %>%
+    summarise(rel_abund = mean(Abundance)) %>%
+    filter(state == "RSV+") %>%
+    arrange(desc(rel_abund))%>%
+    top_n(6)
+
+rankedAbundanceNeg <- psmelt(zp_rel_abund) %>%
+    group_by(state, OTU) %>%
+    summarise(rel_abund = mean(Abundance)) %>%
+    filter(state == "RSV-") %>%
+    arrange(desc(rel_abund))%>%
+    top_n(6)
 ```
 
 ## Testing for a difference in genus level abundance 

@@ -97,6 +97,17 @@ Selected color palette for all graphing
 ```{r message=FALSE, warning=FALSE}
 chosen_pal_16 <- "awtools::bpalette"
 chosen_pal_5 <- "fishualize::Scarus_hoefleri"
+
+usepalette <- paletteer::paletteer_d(chosen_pal_16, direction = -1)
+
+usepalette <- c(paletteer::palettes_d[["Polychrome"]]$kelly)
+
+usepalette <- c(usepalette[which(usepalette != "#f2f3f4")]) 
+usepalette <- c(usepalette[which(usepalette != "#222222")])
+usepalette <- c(usepalette[which(usepalette != "#f3c300")])
+
+usepalette[16] <-"#f2f3f4"
+
 ```
 
 # RSV Status
@@ -119,11 +130,11 @@ rankedAbundancePos <- psmelt(zp_rel_abund) %>%
     group_by(state, OTU) %>%
     summarise(rel_abund = mean(Abundance)) %>%
     filter(state == "RSV+") %>%
-    arrange(rel_abund)
+    arrange(desc(rel_abund))
 
 #Create levels in order of abundance, but keep Order at the top of the list so it will plot at the top of the chart; used in next code chunk after phyloseq melt
 
-level_for_factor <- c("Other", rankedAbundancePos$OTU[rankedAbundancePos$OTU != "Other"])
+level_for_factor <- c(rankedAbundancePos$OTU[rankedAbundancePos$OTU != "Other"], "Other")
 
 rankedAbundanceNeg <- psmelt(zp_rel_abund) %>%
     group_by(state, OTU) %>%
@@ -149,8 +160,8 @@ ggplot(zp_rel_abund_df, aes(color = genus, fill = genus, y=Abundance, x=Sample))
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
         legend.key.size = unit(0.2, "cm")) +
-  scale_fill_paletteer_d(chosen_pal_16) +
-  scale_color_paletteer_d(chosen_pal_16)
+  scale_fill_manual(values = usepalette) +
+  scale_color_manual(values = usepalette)
 
 ggsave("Plots/1pct/relativeAbundance.jpeg")
 ```
@@ -271,7 +282,8 @@ ggsave("Plots/1pct/PCoA_Atchinson.jpeg")
 pcoa <- ordinate(zp_rel_abund, method = "PCoA", distance = "bray", weighted = TRUE)
 
 PCoA_Bray_plot <- plot_ordination(zp_rel_abund, pcoa, color = "state") +
-    scale_color_hue(l=45)
+    scale_color_hue(l=45) + 
+    stat_ellipse(lineype = 2)
 
 ggsave("Plots/1pct/PCoA_Bray.jpeg")
 
@@ -284,7 +296,8 @@ zprime.ord <- ordinate(zp_rel_abund, "NMDS", "bray")
 
 NMDS_plot <- plot_ordination(zp_rel_abund, zprime.ord, type="samples", color="state") + 
     #geom_point(size=3) +
-    scale_color_hue(l=45)
+    scale_color_hue(l=45) +
+    stat_ellipse(linetype = 2)
 
 
 ggsave("Plots/1pct/NMDS.jpeg")

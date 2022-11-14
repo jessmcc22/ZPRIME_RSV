@@ -104,8 +104,7 @@ chosen_pal_5 <- "fishualize::Scarus_hoefleri"
 ```
 
 # RSV Status
-## Visualizing Relative Abundance 
-Relative abundances show the microbes present in each samples' microbiome as a percentage of the whole microbiome. Percentages will differ from sample to sample even if actual counts of specific microbes are similar. Or, percentages may seem similar when the counts are actually VERY different.
+## Determine Relative Abundance
 
 ```{r message=FALSE, warning=FALSE}
 relativeAbundance <- function(x){
@@ -114,8 +113,40 @@ relativeAbundance <- function(x){
 
 zp_rel_abund <- transform_sample_counts(zprime, relativeAbundance)
 
-plot_bar(zp_rel_abund, fill = "genus") +
-  geom_bar(aes(color = genus, fill = genus), stat = "identity", position = "stack") +
+```
+
+### Rank Most Abundant Genera 
+
+```{r messafe=FALSE, warning=FALSE}
+
+rankedAbundancePos <- psmelt(zp_rel_abund) %>%
+    group_by(state, OTU) %>%
+    summarise(rel_abund = mean(Abundance)) %>%
+    filter(state == "RSV+") %>%
+    arrange(rel_abund)
+
+#Create levels in order of abundance, but keep Order at the top of the list so it will plot at the top of the chart; used in next code chunk after phyloseq melt
+
+level_for_factor <- c("Other", rankedAbundancePos$OTU[rankedAbundancePos$OTU != "Other"])
+
+rankedAbundanceNeg <- psmelt(zp_rel_abund) %>%
+    group_by(state, OTU) %>%
+    summarise(rel_abund = mean(Abundance)) %>%
+    filter(state == "RSV-") %>%
+    arrange(desc(rel_abund))
+
+```
+### Visualizing Relative Abundance 
+Relative abundances show the microbes present in each samples' microbiome as a percentage of the whole microbiome. Percentages will differ from sample to sample even if actual counts of specific microbes are similar. Or, percentages may seem similar when the counts are actually VERY different.
+
+```{r message=FALSE, warning=FALSE}
+
+zp_rel_abund_df <- psmelt(zp_rel_abund)
+
+zp_rel_abund_df$genus <- factor(zp_rel_abund_df$genus, levels = level_for_factor)
+
+ggplot(zp_rel_abund_df, aes(color = genus, fill = genus, y=Abundance, x=Sample)) +
+  geom_bar(stat = "identity", position = "stack") +
   labs(x = "Sample", y = "Relative Abundance\n") +
   facet_wrap(~state, scales = "free") +
   theme(panel.background = element_blank(),
@@ -126,24 +157,6 @@ plot_bar(zp_rel_abund, fill = "genus") +
   scale_fill_hue(l=45)
 
 ggsave("Plots/point1/relativeAbundance.jpeg")
-```
-## Top Five Most Abundant Genera 
-
-```{r messafe=FALSE, warning=FALSE}
-
-rankedAbundancePos <- psmelt(zp_rel_abund) %>%
-    group_by(state, OTU) %>%
-    summarise(rel_abund = mean(Abundance)) %>%
-    filter(state == "RSV+") %>%
-    arrange(desc(rel_abund))%>%
-    top_n(6)
-
-rankedAbundanceNeg <- psmelt(zp_rel_abund) %>%
-    group_by(state, OTU) %>%
-    summarise(rel_abund = mean(Abundance)) %>%
-    filter(state == "RSV-") %>%
-    arrange(desc(rel_abund))%>%
-    top_n(6)
 ```
 
 ## Testing for a difference in genus level abundance 
@@ -175,7 +188,7 @@ group_data <- list(zp_pos_otu, zp_neg_otu)
 ```
 
 ## Alpha Diversity 
-Alpha diversity quantifies diversity within individual samples and compares the differences across groups. These analysis aim to determine the number of species in a given sample (richness) and compare averages in one group (RSV+) to another group (RSV-). Some methods will also compare evenness, or how the abundance of each individual species in a sample compares to the abundance of other species (frequency). The Shannon index combines richness and frequency. 
+Alpha diversity quantifies diversity within individual samples and compares the differences across groups. These analysis aim to determine the number of genera in a given sample (richness) and compare averages in one group (RSV+) to another group (RSV-). Some methods will also compare evenness, or how the abundance of each individual genus in a sample compares to the abundance of other genera (frequency). The Shannon index combines richness and frequency.
 
 ### Shannon and Simpson Indexes
 Comparing the total number of observed genera.
@@ -315,7 +328,7 @@ zp_neg_otu<- otu_table(zp_neg)%>%
   as.data.frame()
 
 for(genus in colnames(zp_pos_otu)){
-    wilcox_test[[genus]] <- round(wilcox.test(zp_pos_otu[[genus]], zp_neg_otu[[genus]])$p.value, 4)
+    wilcox_test[[genus]] <- round(wilcox.test(zp_pos_otu[[genus]], zp_neg_otu[[genus]])$p.value, 3)
 }
 
 wilcox_test <- as.data.frame(wilcox_test, row.names = "RSV_state") %>%
@@ -323,7 +336,7 @@ wilcox_test <- as.data.frame(wilcox_test, row.names = "RSV_state") %>%
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_state = round(p.adjust(RSV_state, "BH"), 4))
+   mutate(BH_FDR_state = round(p.adjust(RSV_state, "BH"), 3))
 
 print(wilcox_test)
 ```
@@ -343,7 +356,7 @@ print(psmelt(zp_rel_abund) %>%
   ggplot(data = ., aes(x = state, y = Abundance)) +
   geom_boxplot(outlier.shape  = NA) +
   geom_jitter(aes(color = genus), height = 0, width = .2) +  
-  labs(title = "Relative Abundance based on RSV Status", x = "", y = "Relative Abundance\n") +
+  labs(title = "Relative Abundance based on RSV Status - Genera", x = "", y = "Relative Abundance\n") +
   facet_wrap(~ OTU, scales = "free") +
   theme(legend.position = "none") +
   scale_color_hue(l=45))
@@ -442,7 +455,7 @@ zp_clr_hospital_otu <- otu_table(zp_clr_hospital) %>%
 p_vals <- list()
 
 for(genus in colnames(zp_clr_BID_otu)){
-    p_vals[[genus]] <-round(wilcox.test(zp_clr_BID_otu[[genus]], zp_clr_hospital_otu[[genus]])$p.value, 4)
+    p_vals[[genus]] <-round(wilcox.test(zp_clr_BID_otu[[genus]], zp_clr_hospital_otu[[genus]])$p.value, 3)
 }
 
 p_vals <- as.data.frame(p_vals, row.names = "location") %>%
@@ -452,7 +465,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_location = round(p.adjust(location, "BH"), 4))
+   mutate(BH_FDR_location = round(p.adjust(location, "BH"), 3))
 
 
 print(wilcox_test)
@@ -569,7 +582,7 @@ zp_HIV_pos_otu <- otu_table(zp_HIV_pos) %>%
 p_vals <- list()
 
 for(genus in colnames(zp_HIV_neg_otu)){
-    p_vals[[genus]] <- round(wilcox.test(zp_HIV_neg_otu[[genus]], zp_HIV_pos_otu[[genus]])$p.value, 4)
+    p_vals[[genus]] <- round(wilcox.test(zp_HIV_neg_otu[[genus]], zp_HIV_pos_otu[[genus]])$p.value, 3)
 }
 
 p_vals <- as.data.frame(p_vals, row.names = "HIV_status") %>%
@@ -578,7 +591,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_HIV = round(p.adjust(HIV_status, "BH"), 4))
+   mutate(BH_FDR_HIV = round(p.adjust(HIV_status, "BH"), 3))
 
 print(wilcox_test)
 ```
@@ -716,7 +729,7 @@ all_data <- rbind(zp_female_otu, zp_male_otu)
 p_vals <- list()
 
 for(genus in microbes){
-    p_vals[[genus]] <- round(wilcox.test(zp_female_otu[[genus]], zp_male_otu[[genus]])$p.value, 4)
+    p_vals[[genus]] <- round(wilcox.test(zp_female_otu[[genus]], zp_male_otu[[genus]])$p.value, 3)
 }
 
 p_vals <- as.data.frame(p_vals, row.names = "sex") %>%
@@ -727,7 +740,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_sex = round(p.adjust(sex, "BH"), 4))
+   mutate(BH_FDR_sex = round(p.adjust(sex, "BH"), 3))
 
 print(wilcox_test)
 ```
@@ -888,7 +901,7 @@ all_data <- rbind(zp_zero_otu, zp_one_otu, zp_two_otu, zp_four_otu)
 p_vals <- list()
 
 for(genus in microbes){
-    p_vals[[genus]] <- round(kruskal.test(all_data[[genus]] ~ all_data$age)$p.value, 4)
+    p_vals[[genus]] <- round(kruskal.test(all_data[[genus]] ~ all_data$age)$p.value, 3)
 }
 
 p_vals <- as.data.frame(p_vals, row.names = "age") %>%
@@ -899,7 +912,7 @@ wilcox_test <- cbind(wilcox_test, p_vals)
 
 wilcox_test <- wilcox_test %>%
    as.data.frame() %>%
-   mutate(BH_FDR_age = round(p.adjust(age, "BH"), 4))
+   mutate(BH_FDR_age = round(p.adjust(age, "BH"), 3))
 
 print(wilcox_test)
 ```

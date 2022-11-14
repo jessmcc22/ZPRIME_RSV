@@ -341,7 +341,7 @@ print(psmelt(zp_rel_abund) %>%
   ggplot(data = ., aes(x = state, y = Abundance)) +
   geom_boxplot(outlier.shape  = NA) +
   geom_jitter(aes(color = species), height = 0, width = .2) +  
-  labs(title = "Relative Abundance based on RSV Status", x = "", y = "Relative Abundance\n") +
+  labs(title = "Relative Abundance based on RSV Status - Species", x = "", y = "Relative Abundance\n") +
   facet_wrap(~ OTU, scales = "free") +
   theme(legend.position = "none") +
   scale_color_hue(l=45))

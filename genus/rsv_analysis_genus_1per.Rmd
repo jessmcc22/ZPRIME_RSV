@@ -100,8 +100,7 @@ chosen_pal_5 <- "fishualize::Scarus_hoefleri"
 ```
 
 # RSV Status
-## Visualizing Relative Abundance 
-Relative abundances show the microbes present in each samples' microbiome as a percentage of the whole microbiome. Percentages will differ from sample to sample even if actual counts of specific microbes are similar. Or, percentages may seem similar when the counts are actually VERY different.
+## Determine Relative Abundance
 
 ```{r message=FALSE, warning=FALSE}
 relativeAbundance <- function(x){
@@ -110,20 +109,9 @@ relativeAbundance <- function(x){
 
 zp_rel_abund <- transform_sample_counts(zprime, relativeAbundance)
 
-plot_bar(zp_rel_abund, fill = "genus") +
-  geom_bar(aes(color = genus, fill = genus), stat = "identity", position = "stack") +
-  labs(x = "Sample", y = "Relative Abundance\n") +
-  facet_wrap(~state, scales = "free") +
-  theme(panel.background = element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        legend.key.size = unit(0.2, "cm")) +
-  scale_fill_paletteer_d(chosen_pal_16)+
-  scale_color_paletteer_d(chosen_pal_16)
-
-ggsave("Plots/point1/relativeAbundance.jpeg")
 ```
-## Top Five Most Abundant Genera 
+
+### Rank Most Abundant Genera 
 
 ```{r messafe=FALSE, warning=FALSE}
 
@@ -131,15 +119,40 @@ rankedAbundancePos <- psmelt(zp_rel_abund) %>%
     group_by(state, OTU) %>%
     summarise(rel_abund = mean(Abundance)) %>%
     filter(state == "RSV+") %>%
-    arrange(desc(rel_abund))%>%
-    top_n(6)
+    arrange(rel_abund)
+
+#Create levels in order of abundance, but keep Order at the top of the list so it will plot at the top of the chart; used in next code chunk after phyloseq melt
+
+level_for_factor <- c("Other", rankedAbundancePos$OTU[rankedAbundancePos$OTU != "Other"])
 
 rankedAbundanceNeg <- psmelt(zp_rel_abund) %>%
     group_by(state, OTU) %>%
     summarise(rel_abund = mean(Abundance)) %>%
     filter(state == "RSV-") %>%
-    arrange(desc(rel_abund))%>%
-    top_n(6)
+    arrange(desc(rel_abund))
+
+```
+### Visualizing Relative Abundance 
+Relative abundances show the microbes present in each samples' microbiome as a percentage of the whole microbiome. Percentages will differ from sample to sample even if actual counts of specific microbes are similar. Or, percentages may seem similar when the counts are actually VERY different.
+
+```{r message=FALSE, warning=FALSE}
+
+zp_rel_abund_df <- psmelt(zp_rel_abund)
+
+zp_rel_abund_df$genus <- factor(zp_rel_abund_df$genus, levels = level_for_factor)
+
+ggplot(zp_rel_abund_df, aes(color = genus, fill = genus, y=Abundance, x=Sample)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(x = "Sample", y = "Relative Abundance\n") +
+  facet_wrap(~state, scales = "free") +
+  theme(panel.background = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        legend.key.size = unit(0.2, "cm")) +
+  scale_fill_paletteer_d(chosen_pal_16) +
+  scale_color_paletteer_d(chosen_pal_16)
+
+ggsave("Plots/1pct/relativeAbundance.jpeg")
 ```
 
 ## Testing for a difference in genus level abundance 
@@ -195,7 +208,7 @@ adiv %>%
   theme(legend.position="none", plot.title = element_text(hjust = 0.5))+
   scale_color_hue(l=45)
 
-ggsave("Plots/point1/shannonAndSimpson/state.jpeg")
+ggsave("Plots/1pct/shannonAndSimpson/state.jpeg")
 ```
 
 #### Statistical Testing
@@ -241,7 +254,7 @@ p <- plot_heatmap(zpscale, method = "NMDS", distance = "bray",
 axis_color <- ifelse(p$scales$scales[[1]]$labels == "RSV+", "red", "blue")
 p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10, colour = axis_color), plot.margin = unit(c(1,1,1,1),"cm"))
 
-ggsave("Plots/point1/heatmap.jpeg")
+ggsave("Plots/1pct/heatmap.jpeg")
 ```
 
 ### PCoA
@@ -252,7 +265,7 @@ clr_dist_matrix <- phyloseq::distance(zp_rel_abund, method = "euclidean")
 eucDis <- ordinate(zp_rel_abund, method = "PCoA", distance = clr_dist_matrix )
 PCoA_Atchison_plot <- plot_ordination(zp_rel_abund, eucDis, color = "state")
 
-ggsave("Plots/point1/PCoA_Atchinson.jpeg")
+ggsave("Plots/1pct/PCoA_Atchinson.jpeg")
 
 #Bray-Curtis Distance PCoA
 pcoa <- ordinate(zp_rel_abund, method = "PCoA", distance = "bray", weighted = TRUE)
@@ -260,7 +273,7 @@ pcoa <- ordinate(zp_rel_abund, method = "PCoA", distance = "bray", weighted = TR
 PCoA_Bray_plot <- plot_ordination(zp_rel_abund, pcoa, color = "state") +
     scale_color_hue(l=45)
 
-ggsave("Plots/point1/PCoA_Bray.jpeg")
+ggsave("Plots/1pct/PCoA_Bray.jpeg")
 
 ```
 
@@ -274,7 +287,7 @@ NMDS_plot <- plot_ordination(zp_rel_abund, zprime.ord, type="samples", color="st
     scale_color_hue(l=45)
 
 
-ggsave("Plots/point1/NMDS.jpeg")
+ggsave("Plots/1pct/NMDS.jpeg")
 ```
 
 ### Create one Bray-Curtis Figure
@@ -287,7 +300,7 @@ brayCurtisFigure <- ggarrange(p,
     bgcolor("white")
 brayCurtisFigure
 
-ggsave("Plots/point1/BrayCurtisFigure.jpeg")
+ggsave("Plots/1pct/BrayCurtisFigure.jpeg")
 ```
 
 ## Differential Abundance Testing
@@ -345,7 +358,7 @@ print(psmelt(zp_rel_abund) %>%
   scale_color_hue(l=45))
 
 
-ggsave("Plots/point1/wilcox_test_sig_state.jpeg", dpi = 300, width = 5, height = 4)
+ggsave("Plots/1pct/wilcox_test_sig_state.jpeg", dpi = 300, width = 5, height = 4)
 
 }else{
     print("No signifiant taxa via wilcoxon test for RSV status.")
@@ -394,7 +407,7 @@ adiv %>%
   theme(legend.position="none") +
   scale_color_hue(l=45)
 
-ggsave("Plots/point1/shannonAndSimpson/location.jpeg")
+ggsave("Plots/1pct/shannonAndSimpson/location.jpeg")
 ```
 #### Statistical Test
 ```{r, message=FALSE, warning=FALSE}
@@ -472,7 +485,7 @@ if(length(significant_taxa$location) != 0){
               scale_color_hue(l=45) #, plot.title=element_text(hjust=0.5, size=18))
     
     locationFig
-    ggsave("Plots/point1/wilcox_test_sig_location.jpeg")
+    ggsave("Plots/1pct/wilcox_test_sig_location.jpeg")
 }else{
     print("No signifiant taxa via wilcoxon test for Location.")
 }
@@ -521,7 +534,7 @@ adiv %>%
   theme(legend.position="none") +
   scale_color_hue(l=45)
 
-ggsave("Plots/point1/shannonAndSimpson/mother_hiv.jpeg")
+ggsave("Plots/1pct/shannonAndSimpson/mother_hiv.jpeg")
 ```
 #### Statistical Test
 ```{r, message=FALSE, warning=FALSE}
@@ -597,7 +610,7 @@ if(length(row.names(significant_taxa)) != 0){
         theme(legend.position = "none", plot.title=element_text(hjust=0.5, size=18)) +
         scale_color_hue(l=45))
     
-    ggsave("Plots/point1/wilcox_test_sig_mother_hiv.jpeg")
+    ggsave("Plots/1pct/wilcox_test_sig_mother_hiv.jpeg")
 }else{
     print("No significant taxa based on HIV exposure")
 }
@@ -650,7 +663,7 @@ adiv %>%
   theme(legend.position="none") +
   scale_color_hue(l=45)
 
-ggsave("Plots/point1/shannonAndSimpson/mother_hiv.jpeg")
+ggsave("Plots/1pct/shannonAndSimpson/mother_hiv.jpeg")
 ```
 #### Statistical Test
 ```{r, message=FALSE, warning=FALSE}
@@ -748,7 +761,7 @@ if(length(row.names(significant_taxa))> 0){
   
   sexFig
   
-  ggsave("Plots/point1/wilcox_sig_sex.jpeg")
+  ggsave("Plots/1pct/wilcox_sig_sex.jpeg")
 }else{
     print("No significance based on sex.")
 }
@@ -810,7 +823,7 @@ adiv %>%
   theme(legend.position="none") +
   scale_color_hue(l=45)
 
-ggsave("Plots/point1/shannonAndSimpson/age.jpeg")
+ggsave("Plots/1pct/shannonAndSimpson/age.jpeg")
 ```
 
 #### Statistical Test
@@ -919,7 +932,7 @@ if(length(row.names(significant_taxa)) != 0){
 
   ageFig
   
-  ggsave("Plots/point1/kruskal_Age.jpeg")
+  ggsave("Plots/1pct/kruskal_Age.jpeg")
 }else{
     print("No significant difference based on length of hospital stay.")
 }
@@ -950,5 +963,5 @@ otherVariablesFigure <- ggarrange(locationFig, sexFig, ageFig,
                     bgcolor("white")
 otherVariablesFigure
 
-ggsave("Plots/point1/otherVariablesFigure.jpeg")
+ggsave("Plots/1pct/otherVariablesFigure.jpeg")
 ```

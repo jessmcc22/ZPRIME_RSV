@@ -107,6 +107,8 @@ usepalette <- c(usepalette[which(usepalette != "#222222")])
 usepalette <- c(usepalette[which(usepalette != "#f3c300")])
 usepalette <- c(usepalette[which(usepalette != "#848482")])
 
+usepalette[9] <- "#ba75bf"
+usepalette[11] <- "#61c2ae"
 usepalette[16] <-"#9E9E9EFF"
 
 ```

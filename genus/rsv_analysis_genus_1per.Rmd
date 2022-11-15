@@ -105,8 +105,9 @@ usepalette <- c(paletteer::palettes_d[["Polychrome"]]$kelly)
 usepalette <- c(usepalette[which(usepalette != "#f2f3f4")]) 
 usepalette <- c(usepalette[which(usepalette != "#222222")])
 usepalette <- c(usepalette[which(usepalette != "#f3c300")])
+usepalette <- c(usepalette[which(usepalette != "#848482")])
 
-usepalette[16] <-"#f2f3f4"
+usepalette[16] <-"#9E9E9EFF"
 
 ```
 

@@ -267,7 +267,8 @@ ggsave("Plots/point1/heatmap.jpeg")
 #Atchinson Distance PCoA
 clr_dist_matrix <- phyloseq::distance(zp_rel_abund, method = "euclidean") 
 eucDis <- ordinate(zp_rel_abund, method = "PCoA", distance = clr_dist_matrix )
-PCoA_Atchison_plot <- plot_ordination(zp_rel_abund, eucDis, color = "state")
+PCoA_Atchison_plot <- plot_ordination(zp_rel_abund, eucDis, color = "state")  +
+    stat_ellipse(linetype = 2)
 
 ggsave("Plots/point1/PCoA_Atchinson.jpeg")
 
@@ -275,7 +276,8 @@ ggsave("Plots/point1/PCoA_Atchinson.jpeg")
 pcoa <- ordinate(zp_rel_abund, method = "PCoA", distance = "bray", weighted = TRUE)
 
 PCoA_Bray_plot <- plot_ordination(zp_rel_abund, pcoa, color = "state") +
-    scale_color_hue(l=45)
+    scale_color_hue(l=45) +
+    stat_ellipse(linetype = 2)
 
 ggsave("Plots/point1/PCoA_Bray.jpeg")
 
@@ -287,8 +289,8 @@ ggsave("Plots/point1/PCoA_Bray.jpeg")
 zprime.ord <- ordinate(zp_rel_abund, "NMDS", "bray")
 
 NMDS_plot <- plot_ordination(zp_rel_abund, zprime.ord, type="samples", color="state") + 
-    #geom_point(size=3) +
-    scale_color_hue(l=45)
+    scale_color_hue(l=45) +
+    stat_ellipse(linetype = 2)
 
 
 ggsave("Plots/point1/NMDS.jpeg")

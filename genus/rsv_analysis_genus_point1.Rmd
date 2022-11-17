@@ -17,6 +17,7 @@ library(devtools)
 library(phyloseq) 
 library(ggpubr)
 library(paletteer)
+library(vegan)
 ```
 
 # Read in Data
@@ -307,6 +308,18 @@ brayCurtisFigure <- ggarrange(p,
 brayCurtisFigure
 
 ggsave("Plots/point1/BrayCurtisFigure.jpeg")
+```
+### PERMANOVA
+Can test to see if centroid and dispersion is different between RSV groups with a PERMANOVA statistical test.  
+```{r message=FALSE, warning=FALSE, fig.width=10}
+# Generate Bray Curtis matrix from phyloseq object
+brayCurtisMatrix <- phyloseq::distance(zp_rel_abund, method = "bray")
+
+#ADONIS test
+#Multivariate analysis using Bray-Curtis distance matrix
+vegan::adonis2(brayCurtisMatrix ~ phyloseq::sample_data(zp_rel_abund)$state)
+
+vegan::adonis(data.frame(t(otu_table(zp_rel_abund)))~state, data=data.frame(sam_data(zp_rel_abund)[,1:6]), permutations = 9999, method = "bray")
 ```
 
 ## Differential Abundance Testing

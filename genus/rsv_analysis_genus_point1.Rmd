@@ -260,6 +260,10 @@ axis_color <- ifelse(p$scales$scales[[1]]$labels == "RSV+", "red", "blue")
 p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10, colour = axis_color), plot.margin = unit(c(1,1,1,1),"cm"))
 
 ggsave("Plots/point1/heatmap.jpeg")
+
+library(ComplexHeatmap)
+zp_scale_bray <- as.matrix(phyloseq::distance(zp_rel_abund, method = "bray"))
+ComplexHeatmap::Heatmap(zp_scale_bray)
 ```
 
 ### PCoA
@@ -318,8 +322,6 @@ brayCurtisMatrix <- phyloseq::distance(zp_rel_abund, method = "bray")
 #ADONIS test
 #Multivariate analysis using Bray-Curtis distance matrix
 vegan::adonis2(brayCurtisMatrix ~ phyloseq::sample_data(zp_rel_abund)$state)
-
-vegan::adonis(data.frame(t(otu_table(zp_rel_abund)))~state, data=data.frame(sam_data(zp_rel_abund)[,1:6]), permutations = 9999, method = "bray")
 ```
 
 ## Differential Abundance Testing

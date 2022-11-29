@@ -12,11 +12,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r, message=FALSE, warning=FALSE}
 setwd("/Users/jessmcc/Documents/workProjects/ZPRIME_RSV")
-library(tidyverse)
+
+library(ComplexHeatmap)
 library(devtools) 
-library(phyloseq) 
 library(ggpubr)
 library(paletteer)
+library(phyloseq) 
+library(tidyverse)
+library(umap)
 library(vegan)
 ```
 
@@ -159,7 +162,29 @@ ggplot(zp_rel_abund_df, aes(color = genus, fill = genus, y=Abundance, x=Sample))
 
 ggsave("Plots/point1/relativeAbundance.jpeg")
 ```
+#### HeatMap 
+Visualize the Relative Abundance ordered by Bray-curtis dissimilarity (as two samples share fewer taxa, the number increases 0 for exact same composition, 1 for no shared genera) results.
 
+```{r, message=FALSE, warning=FALSE, fig.width=10}
+zp_scale <- zp_rel_abund %>%
+    otu_table() %>%
+    t() %>%
+    scale() %>%
+    t() %>%
+    otu_table(taxa_are_rows = TRUE)
+
+zpscale <- zp_rel_abund
+
+otu_table(zpscale) <- zp_scale
+
+p <- plot_heatmap(zpscale, method = "NMDS", distance = "bray",
+             sample.label = "state", sample.order = "state")
+axis_color <- ifelse(p$scales$scales[[1]]$labels == "RSV+", "red", "blue")
+p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10, colour = axis_color), plot.margin = unit(c(1,1,1,1),"cm"))
+print(p)
+ggsave("Plots/point1/heatmap.jpeg")
+
+```
 ## Testing for a difference in genus level abundance 
 Analogous to a two-sample t-test, but instead we are testing whether taxa 
 frequencies observed in both groups of metagenomic samples are equal. A 
@@ -239,31 +264,16 @@ wilcox.test(Simpson ~ Status, data = adiv, conf.int = TRUE)
 ## Beta Diversity 
 Beta Diversity aims to analyze feature dissimilarity between each pair of samples and utilize distance analysis, like Bray-Curtis or UniFrac. Quantitivate methods, like Bray-Curtis or weighted UniFrac, look at abundance of features in determining distances whereas Qualitative measures, like unweighted uniFrac or binary Jaccard, only look at presence or absence of features. PERMANOVA is used to determine clustering between groups.These are then visualized via PCA or PCoA
 
-### HeatMap 
-Visualize the Bray-curtis dissimilarity (as two samples share fewer taxa, the number increases 0 for exact same composition, 1 for no shared genera) results.
 
+
+##### Complex HeatMap
 ```{r, message=FALSE, warning=FALSE, fig.width=10}
-zp_scale <- zp_rel_abund %>%
-    otu_table() %>%
-    t() %>%
-    scale() %>%
-    t() %>%
-    otu_table(taxa_are_rows = TRUE)
-
-zpscale <- zp_rel_abund
-
-otu_table(zpscale) <- zp_scale
-
-p <- plot_heatmap(zpscale, method = "NMDS", distance = "bray",
-             sample.label = "state", sample.order = "state")
-axis_color <- ifelse(p$scales$scales[[1]]$labels == "RSV+", "red", "blue")
-p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10, colour = axis_color), plot.margin = unit(c(1,1,1,1),"cm"))
-
-ggsave("Plots/point1/heatmap.jpeg")
-
-library(ComplexHeatmap)
 zp_scale_bray <- as.matrix(phyloseq::distance(zp_rel_abund, method = "bray"))
-ComplexHeatmap::Heatmap(zp_scale_bray)
+rsv_pos_samples <- paste0("S", sample_data(zp_pos)$subject)
+rsv_neg_samples <- paste0("S", sample_data(zp_neg)$subject)
+    
+ComplexHeatmap::Heatmap(zp_scale_bray, cluster_rows = FALSE, column_names_rot = 45)
+heatmap(zp_scale_bray)
 ```
 
 ### PCoA
@@ -322,6 +332,16 @@ brayCurtisMatrix <- phyloseq::distance(zp_rel_abund, method = "bray")
 #ADONIS test
 #Multivariate analysis using Bray-Curtis distance matrix
 vegan::adonis2(brayCurtisMatrix ~ phyloseq::sample_data(zp_rel_abund)$state)
+```
+
+### UMAP
+ 
+```{r message=FALSE, warning=FALSE, fig.width=10}
+library(umap)
+
+zp_umap <- umap(otu_table(zp_rel_abund))
+zp_labels <- row.names(tax_table(zp_rel_abund))
+
 ```
 
 ## Differential Abundance Testing

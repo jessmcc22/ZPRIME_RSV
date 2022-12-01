@@ -165,7 +165,7 @@ ggsave("Plots/point1/relativeAbundance.jpeg")
 #### HeatMap 
 Visualize the Relative Abundance ordered by Bray-curtis dissimilarity (as two samples share fewer taxa, the number increases 0 for exact same composition, 1 for no shared genera) results.
 
-```{r, message=FALSE, warning=FALSE, fig.width=10}
+```{r, message=FALSE, warning=FALSE, fig.width=16}
 zp_scale <- zp_rel_abund %>%
     otu_table() %>%
     t() %>%
@@ -182,7 +182,7 @@ p <- plot_heatmap(zpscale, method = "NMDS", distance = "bray",
 axis_color <- ifelse(p$scales$scales[[1]]$labels == "RSV+", "red", "blue")
 p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10, colour = axis_color), plot.margin = unit(c(1,1,1,1),"cm"))
 print(p)
-ggsave("Plots/point1/heatmap.jpeg")
+ggsave("Plots/point1/heatmap.jpeg", dpi = 600)
 
 ```
 ## Testing for a difference in genus level abundance 
@@ -313,11 +313,9 @@ ggsave("Plots/point1/NMDS.jpeg")
 
 ### Create one Bray-Curtis Figure
 ```{r message=FALSE, warning=FALSE, fig.width=10}
-brayCurtisFigure <- ggarrange(p, 
-                              ggarrange(NMDS_plot, PCoA_Bray_plot, 
-                                        ncol = 2, labels = c("B", "C"),
-                                        common.legend = TRUE), 
-                    labels = c("A"),nrow = 2, heights = c(2,1.5))+
+brayCurtisFigure <- ggarrange(NMDS_plot, PCoA_Bray_plot, 
+                              ncol = 2, labels = c("A", "B"),
+                              common.legend = TRUE) +
     bgcolor("white")
 brayCurtisFigure
 

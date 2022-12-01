@@ -226,7 +226,7 @@ Beta Diversity aims to analyze feature dissimilarity between each pair of sample
 ### HeatMap 
 Visualize the Bray-curtis dissimilarity (as two samples share fewer taxa, the number increases 0 for exact same composition, 1 for no shared species) results.
 
-```{r, message=FALSE, warning=FALSE, fig.width=10}
+```{r, message=FALSE, warning=FALSE, fig.width=16, fig.height= 8}
 zp_scale <- zp_rel_abund %>%
     otu_table() %>%
     t() %>%
@@ -241,9 +241,9 @@ otu_table(zpscale) <- zp_scale
 p <- plot_heatmap(zpscale, method = "NMDS", distance = "bray",
              sample.label = "state", sample.order = "state")
 axis_color <- ifelse(p$scales$scales[[1]]$labels == "RSV+", "red", "blue")
-p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10, colour = axis_color), plot.margin = unit(c(1,1,1,1),"cm"))
+p <- p + theme(legend.key.size = unit(0.2, 'cm'),axis.text.x = element_text(angle = 90, hjust = 1, size = 4, colour = axis_color))
 
-ggsave("Plots/point1/heatmap.jpeg")
+ggsave("Plots/point1/heatmap.jpeg", width = 8, height = 4, dpi=600)
 ```
 
 ### PCoA
@@ -283,11 +283,9 @@ ggsave("Plots/point1/NMDS.jpeg")
 
 ### Create one Bray-Curtis Figure
 ```{r message=FALSE, warning=FALSE, fig.width=10}
-brayCurtisFigure <- ggarrange(p, 
-                              ggarrange(NMDS_plot, PCoA_Bray_plot, 
-                                        ncol = 2, labels = c("B", "C"),
-                                        common.legend = TRUE), 
-                    labels = c("A"),nrow = 2, heights = c(2,1.5))+
+brayCurtisFigure <-  ggarrange(NMDS_plot, PCoA_Bray_plot, 
+                               ncol = 2, labels = c("A", "B"),
+                               common.legend = TRUE)+
     bgcolor("white")
 brayCurtisFigure
 

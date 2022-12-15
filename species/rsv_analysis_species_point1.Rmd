@@ -289,7 +289,7 @@ brayCurtisFigure <-  ggarrange(NMDS_plot, PCoA_Bray_plot,
     bgcolor("white")
 brayCurtisFigure
 
-ggsave("Plots/point1/BrayCurtisFigure.jpeg")
+ggsave("Plots/point1/BrayCurtisFigure.pdf", dpi = 1200)
 ```
 
 ## Differential Abundance Testing

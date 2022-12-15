@@ -111,6 +111,8 @@ usepalette[9] <- "#ba75bf"
 usepalette[11] <- "#61c2ae"
 usepalette[16] <-"#9E9E9EFF"
 
+usepalette <- (rev(usepalette[1:16]))
+
 ```
 
 # RSV Status
@@ -133,17 +135,27 @@ rankedAbundancePos <- psmelt(zp_rel_abund) %>%
     group_by(state, OTU) %>%
     summarise(rel_abund = mean(Abundance)) %>%
     filter(state == "RSV+") %>%
-    arrange(desc(rel_abund))
+    arrange((rel_abund))
 
 #Create levels in order of abundance, but keep Order at the top of the list so it will plot at the top of the chart; used in next code chunk after phyloseq melt
 
-level_for_factor <- c(rankedAbundancePos$OTU[rankedAbundancePos$OTU != "Other"], "Other")
+level_for_factor <- c("Other", rankedAbundancePos$OTU[rankedAbundancePos$OTU != "Other"])
 
 rankedAbundanceNeg <- psmelt(zp_rel_abund) %>%
     group_by(state, OTU) %>%
     summarise(rel_abund = mean(Abundance)) %>%
     filter(state == "RSV-") %>%
-    arrange(desc(rel_abund))
+    arrange((rel_abund))
+
+rankedAbundanceSample <- psmelt(zp_rel_abund) %>%
+    group_by(Sample, OTU) %>%
+    summarise(rel_abund = mean(Abundance)) %>%
+    filter(OTU == "Streptococcus" | OTU == "Haemophilus"| OTU == "Moraxella") %>%
+    group_by(Sample) %>%
+    summarise(totals = sum(rel_abund)) %>%
+    arrange(desc(totals))
+
+level_for_samples <- rankedAbundanceSample$Sample
 
 ```
 ### Visualizing Relative Abundance 
@@ -154,6 +166,8 @@ Relative abundances show the microbes present in each samples' microbiome as a p
 zp_rel_abund_df <- psmelt(zp_rel_abund)
 
 zp_rel_abund_df$genus <- factor(zp_rel_abund_df$genus, levels = level_for_factor)
+
+zp_rel_abund_df$Sample <- factor(zp_rel_abund_df$Sample, levels = level_for_samples)
 
 ggplot(zp_rel_abund_df, aes(color = genus, fill = genus, y=Abundance, x=Sample)) +
   geom_bar(stat = "identity", position = "stack") +
@@ -166,7 +180,7 @@ ggplot(zp_rel_abund_df, aes(color = genus, fill = genus, y=Abundance, x=Sample))
   scale_fill_manual(values = usepalette) +
   scale_color_manual(values = usepalette)
 
-ggsave("Plots/1pct/relativeAbundance.jpeg")
+ggsave("Plots/1pct/relativeAbundanceOrderedByStrepANDHaem.pdf", dpi = 1200)
 ```
 
 ## Testing for a difference in genus level abundance 

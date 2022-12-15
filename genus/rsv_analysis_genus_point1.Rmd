@@ -319,7 +319,7 @@ brayCurtisFigure <- ggarrange(NMDS_plot, PCoA_Bray_plot,
     bgcolor("white")
 brayCurtisFigure
 
-ggsave("Plots/point1/BrayCurtisFigure.jpeg")
+ggsave("Plots/point1/BrayCurtisFigure.pdf", dpi = 1200)
 ```
 ### PERMANOVA
 Can test to see if centroid and dispersion is different between RSV groups with a PERMANOVA statistical test.  
@@ -337,9 +337,63 @@ vegan::adonis2(brayCurtisMatrix ~ phyloseq::sample_data(zp_rel_abund)$state)
 ```{r message=FALSE, warning=FALSE, fig.width=10}
 library(umap)
 
-zp_umap <- umap(otu_table(zp_rel_abund))
+zp_umap <- umap(t(otu_table(zp_rel_abund)))
 zp_labels <- row.names(tax_table(zp_rel_abund))
+zp_umap_coordinates <- data.frame(zp_umap$layout)
+colnames(zp_umap_coordinates) <- c("UMAP1","UMAP2")
+zp_umap_coordinates$state  <- sample_data(zp_rel_abund)$state
+zp_umap_coordinates$subject <- sample_data(zp_rel_abund)$subject
 
+
+### add filter, e.g. all rows all zeros!
+pcs <- data.frame(prcomp(t(otu_table(zp_rel_abund)))$x[,1:20])
+umapData <- umap(pcs)
+umaps <-data.frame(umap(pcs)$layout)
+colnames(umaps) <- c("UMAP1","UMAP2")
+```
+
+#### PCA and Umap plots
+```{r}
+pcs$state <- umaps$state <- sample_data(zp_rel_abund)$state
+pcs$subject <- umaps$subject <- sample_data(zp_rel_abund)$subject
+
+pcs1 <- ggplot(pcs, aes(x = PC1, y = PC2, color = state)) +
+ geom_point(size = 0.5) +
+ xlab("PC 1") +
+ ylab("PC 2") +
+ theme(plot.title = element_text(hjust = 0.5)) +
+ ggtitle("PCA Plot (Color = State)")
+
+pcs2 <- ggplot(pcs, aes(x = PC1, y = PC2, color = subject)) +
+ geom_point(size = 0.5) +
+ xlab("PC 1") +
+ ylab("PC 2") +
+ theme(plot.title = element_text(hjust = 0.5)) +
+ ggtitle("PCA Plot (Color = subject)")
+
+umaps1 <- ggplot(zp_umap_coordinates, aes(x = UMAP1, y = UMAP2, color = state)) +
+ geom_point(size = 0.5) +
+ xlab("V1") +
+ ylab("V2") +
+ theme(plot.title = element_text(hjust = 0.5)) +
+ ggtitle("UMAP Plot (Color = State)")
+
+umaps1
+
+umaps2 <- ggplot(zp_umap_coordinates, aes(x = UMAP1, y = UMAP2, color = subject)) +
+ geom_point(size = 0.5) +
+ xlab("V1") +
+ ylab("V2") +
+ theme(plot.title = element_text(hjust = 0.5)) +
+ ggtitle("UMAP Plot (Color = subject)")
+
+umaps2
+# umapFig <- ggarrange(pcs1, pcs2, umaps1, umaps2,
+#                               ncol = 2, labels = c("A", "B", "C", "D")) +
+#     bgcolor("white")
+# umapFig
+
+#grid.arrange(pcs1, pcs2, umaps1, umaps2, nrow=2)
 ```
 
 ## Differential Abundance Testing

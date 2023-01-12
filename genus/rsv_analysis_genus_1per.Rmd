@@ -150,7 +150,7 @@ rankedAbundanceNeg <- psmelt(zp_rel_abund) %>%
 rankedAbundanceSample <- psmelt(zp_rel_abund) %>%
     group_by(Sample, OTU) %>%
     summarise(rel_abund = mean(Abundance)) %>%
-    filter(OTU == "Streptococcus" | OTU == "Haemophilus"| OTU == "Moraxella") %>%
+    filter(OTU == "Streptococcus" | OTU == "Haemophilus" | OTU == "Moraxella" | OTU == "Klebsiella") %>% #|| OTU == "Corynebacterium" | OTU == "Staphylococcus")
     group_by(Sample) %>%
     summarise(totals = sum(rel_abund)) %>%
     arrange(desc(totals))
@@ -164,12 +164,13 @@ Relative abundances show the microbes present in each samples' microbiome as a p
 ```{r message=FALSE, warning=FALSE}
 
 zp_rel_abund_df <- psmelt(zp_rel_abund)
+colnames(zp_rel_abund_df)[16] <- "Genus"
 
-zp_rel_abund_df$genus <- factor(zp_rel_abund_df$genus, levels = level_for_factor)
+zp_rel_abund_df$Genus <- factor(zp_rel_abund_df$Genus, levels = level_for_factor)
 
 zp_rel_abund_df$Sample <- factor(zp_rel_abund_df$Sample, levels = level_for_samples)
 
-ggplot(zp_rel_abund_df, aes(color = genus, fill = genus, y=Abundance, x=Sample)) +
+ggplot(zp_rel_abund_df, aes(color = Genus, fill = Genus, y=Abundance, x=Sample)) +
   geom_bar(stat = "identity", position = "stack") +
   labs(x = "Sample", y = "Relative Abundance\n") +
   facet_wrap(~state, scales = "free") +
@@ -178,9 +179,10 @@ ggplot(zp_rel_abund_df, aes(color = genus, fill = genus, y=Abundance, x=Sample))
         axis.ticks.x=element_blank(),
         legend.key.size = unit(0.2, "cm")) +
   scale_fill_manual(values = usepalette) +
-  scale_color_manual(values = usepalette)
+  scale_color_manual(values = usepalette) +
+    ggtitle("Microbial Composition of RSV- and RSV+ Decedents")
 
-ggsave("Plots/1pct/relativeAbundanceOrderedByStrepANDHaem.pdf", dpi = 1200)
+ggsave("Plots/1pct/relativeAbundanceOrderedByTop4.pdf", dpi = 1200)
 ```
 
 ## Testing for a difference in genus level abundance 

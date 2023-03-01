@@ -284,6 +284,7 @@ p <- plot_heatmap(zpscale, method = "NMDS", distance = "bray",
 axis_color <- ifelse(p$scales$scales[[1]]$labels == "RSV+", "red", "blue")
 p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10, colour = axis_color), plot.margin = unit(c(1,1,1,1),"cm"))
 
+p
 ggsave("Plots/1pct/heatmap.jpeg")
 ```
 

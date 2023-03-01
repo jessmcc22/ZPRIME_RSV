@@ -32,7 +32,7 @@ genus/data/point1pct/Assay_taxonomy_point1pct.csv<br>
 Similar Data Files can be found for species in the species folder<br>
 
 ### MultiQC 
-MultiQC report is available on [GitHub](https://github.com/jessmcc22/ZPRIME_RSV/blob/main/multiqc_report.html).
+MultiQC report is available [here](https://github.com/jessmcc22/ZPRIME_RSV/blob/main/multiqc_report.html).
 
 ### RefSeq
 PathoScope RefSeq libraries were custom-configured.

@@ -1,0 +1,125 @@
+---
+title: "PICRUSt_Analysis"
+author: "Jessica McClintock"
+output: html_document
+date: '2022-09-08'
+---
+
+# Setup
+```{R}
+suppressPackageStartupMessages({
+  # General use
+  library(tidyverse)
+  library(knitr)
+  library(ggplot2)
+  
+  # Data formats
+  library(SummarizedExperiment)
+  library(ALDEx2)
+  })
+
+```
+
+# Read in PICRUSt Object
+```{R}
+picrustSE <- readRDS("/restricted/projectnb/infant-microbiome/work/jessmcc/rsv/PICRUSt/picrust2_output/FinalDatPICRUSt2.RDS")
+
+```
+
+# Group RSV+ and RSV- Samples
+```{R}
+pos_samples <- picrustSE[,picrustSE$state == "pos"]
+neg_samples <- picrustSE[,picrustSE$state == "neg"]
+
+```
+
+#Run ALDEx2 Analysis
+```{R}
+#have output that includes pvalues of which pathways are significant between groups
+# Round PICRUSt counts so that counts are integers
+picrustSE@assays@data@listData[["counts"]] <- round(picrustSE@assays@data@listData[["counts"]], 0)
+
+aldex_results <- aldex(picrustSE@assays@data@listData[["counts"]], picrustSE@colData@listData[["state"]], test="t", effect = TRUE)
+
+```
+
+#Plot ALDEx2 Effect Plot
+```{R}
+ALDEx2::aldex.plot(aldex_results, type="MW", test="wilcox", called.cex = 1, cutoff = 0.05)
+```
+
+#Select Significant Pathways
+```{R}
+#Filter for pathways with a significant difference
+
+sig_pathways <- aldex_results %>%
+  filter(wi.eBH < 0.05) %>%
+  arrange(effect, wi.eBH)
+
+#Add pathway descriptions
+path_descriptions <- as.data.frame(picrustSE@elementMetadata@listData[["description"]], picrustSE@elementMetadata@listData[["pathway"]])
+
+sig_path_descriptions <- merge(sig_pathways, path_descriptions, by = 0)
+sig_path_descriptions
+```
+#Boxplot of significant pathways
+```{R}
+#Select Significant Pathways to plot
+sigPathNames <- row.names(sig_pathways)
+
+countsToPlot <- assays(picrustSE)$counts[rownames(picrustSE@assays@data@listData[["counts"]]) %in% sigPathNames, ]
+ 
+countsToPlot <- t(countsToPlot) %>% as.data.frame()
+
+samples <- rownames(countsToPlot)
+countsToPlot <- cbind(samples, colData(picrustSE)$state, countsToPlot)
+colnames(countsToPlot)[2] <- "state"
+
+for (item in 1:length(countsToPlot$samples)){
+  if(countsToPlot$state[item] == "pos"){
+    countsToPlot$samples[item] <- paste0("+", countsToPlot$samples[item])
+  }else if(countsToPlot$state[item] == "neg"){
+    countsToPlot$samples[item] <- paste0("-", countsToPlot$samples[item])
+  }
+}
+
+#Create Tidy Data
+ countsToPlot <- countsToPlot %>%
+  pivot_longer(cols = !c("state", "samples") , names_to = "pathway", values_to = "Abundance")
+# 
+# #plot in a box plot
+ggplot(countsToPlot, aes(x=state, y=Abundance, fill = state)) +
+  geom_boxplot()+
+  facet_wrap(~pathway)
+
+means <- countsToPlot %>%
+  group_by(pathway, state) %>%
+  summarise_at(vars(Abundance), mean)
+
+medians <- means <- countsToPlot %>%
+  group_by(pathway, state) %>%
+  summarise_at(vars(Abundance), median)
+```
+
+#Heatmap
+```{R}
+countsToPlot <- countsToPlot %>%
+  group_by(samples) %>%
+  mutate(summation = sum(Abundance)) %>%
+  mutate(normalized = round((Abundance/summation), digits = 2))
+
+ggplot(countsToPlot, aes(samples, pathway)) + 
+  geom_tile(aes(fill = normalized))+
+  scale_x_discrete(guide = guide_axis(angle = 90))
+  #scale_fill_discrete(name = "Abundance")
+  
+  #group_by(~state)
+```
+
+
+```{R}
+ggplot(countsToPlot, aes(samples, pathway)) + 
+  geom_tile(aes(fill = Abundance))+
+  scale_x_discrete(guide = guide_axis(angle = 90))
+  #scale_fill_discrete(name = "Abundance")
+```
